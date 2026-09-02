@@ -7,9 +7,131 @@ datasource db {
 }
 
 model Kelas {
+  id      Int       @id @default(autoincrement())
+  kode    String    @unique
+  nama    String
+  siswa   Siswa[]
+  ulangan Ulangan[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Siswa {
+  id      Int    @id @default(autoincrement())
+  nis     String @unique
+  nama    String
+  jk      String
+  kelasId Int
+
+  kelas Kelas      @relation(fields: [kelasId], references: [id])
+  akun  AkunSiswa?
+
+  pesertaUjian PesertaUjian[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AkunSiswa {
+  id           Int     @id @default(autoincrement())
+  siswaId      Int     @unique
+  username     String  @unique
+  passwordHash String
+  status       Boolean @default(true)
+
+  siswa Siswa @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Ulangan {
   id        Int      @id @default(autoincrement())
   kode      String   @unique
-  nama      String
+  judul     String
+  deskripsi String?
+  kelasId   Int
+  tanggal   DateTime
+  durasi    Int
+  status    Boolean  @default(true)
+
+  kelas        Kelas          @relation(fields: [kelasId], references: [id])
+  soal         Soal[]
+  pesertaUjian PesertaUjian[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Soal {
+  id        Int @id @default(autoincrement())
+  ulanganId Int
+
+  tipe       String
+  pertanyaan String
+  gambar     String?
+  bobot      Int     @default(1)
+
+  opsiA        String?
+  opsiB        String?
+  opsiC        String?
+  opsiD        String?
+  jawabanBenar String?
+
+  ulangan      Ulangan        @relation(fields: [ulanganId], references: [id], onDelete: Cascade)
+  jawabanSiswa JawabanSiswa[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PesertaUjian {
+  id        Int       @id @default(autoincrement())
+  ulanganId Int
+  siswaId   Int
+  mulai     DateTime  @default(now())
+  selesai   DateTime?
+  status    String    @default("MENGERJAKAN")
+
+  ulangan Ulangan        @relation(fields: [ulanganId], references: [id], onDelete: Cascade)
+  siswa   Siswa          @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+  jawaban JawabanSiswa[]
+  hasil   HasilUjian?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([ulanganId, siswaId])
+}
+
+model JawabanSiswa {
+  id             Int     @id @default(autoincrement())
+  pesertaUjianId Int
+  soalId         Int
+  jawaban        String?
+  nilai          Int     @default(0)
+  dinilai        Boolean @default(false)
+
+  pesertaUjian PesertaUjian @relation(fields: [pesertaUjianId], references: [id], onDelete: Cascade)
+  soal         Soal         @relation(fields: [soalId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([pesertaUjianId, soalId])
+}
+
+model HasilUjian {
+  id             Int    @id @default(autoincrement())
+  pesertaUjianId Int    @unique
+  nilaiPG        Float  @default(0)
+  nilaiEssay     Float  @default(0)
+  nilaiAkhir     Float  @default(0)
+  status         String @default("BELUM_FINAL")
+
+  pesertaUjian PesertaUjian @relation(fields: [pesertaUjianId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

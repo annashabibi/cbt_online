@@ -4,6 +4,6 @@ import { KelasService } from './kelas.service';
 
 @Module({
   controllers: [KelasController],
-  providers: [KelasService]
+  providers: [KelasService],
 })
 export class KelasModule {}

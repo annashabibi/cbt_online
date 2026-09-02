@@ -1,4 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Select from "react-select";
+import { toast } from "sonner";
+
+const API_URL = "http://localhost:3000";
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("accessToken");
+
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+};
 
 type Kelas = {
   id: number;
@@ -10,379 +23,505 @@ type Siswa = {
   id: number;
   nis: string;
   nama: string;
+  jk: string;
   kelasId: number;
+  kelas?: Kelas;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
-const kelasData: Kelas[] = [
-  {
-    id: 1,
-    kode: "XII-A",
-    nama: "XII IPA A",
-  },
-  {
-    id: 2,
-    kode: "XII-B",
-    nama: "XII IPA B",
-  },
-  {
-    id: 3,
-    kode: "XI-RPL",
-    nama: "XI RPL",
-  },
-  {
-    id: 4,
-    kode: "XII-RPL",
-    nama: "XII RPL",
-  },
-];
+type KelasOption = {
+  value: number;
+  label: string;
+};
 
-const initialData: Siswa[] = [
-  {
-    id: 1,
-    nis: "2026001",
-    nama: "Budi Santoso",
-    kelasId: 1,
-  },
-  {
-    id: 2,
-    nis: "2026002",
-    nama: "Andi Pratama",
-    kelasId: 1,
-  },
-  {
-    id: 3,
-    nis: "2026003",
-    nama: "Siti Aminah",
-    kelasId: 2,
-  },
-  {
-    id: 4,
-    nis: "2026004",
-    nama: "Rizky Ramadhan",
-    kelasId: 3,
-  },
-  {
-    id: 5,
-    nis: "2026005",
-    nama: "Dinda Putri",
-    kelasId: 4,
-  },
-];
-
-export default function Siswa() {
-  const [data, setData] = useState<Siswa[]>(initialData);
+export default function SiswaPage() {
+  const [data, setData] = useState<Siswa[]>([]);
+  const [kelasData, setKelasData] = useState<Kelas[]>([]);
 
   const [search, setSearch] = useState("");
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
+  const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const [nis, setNis] = useState("");
   const [nama, setNama] = useState("");
+  const [jk, setJk] = useState("");
   const [kelasId, setKelasId] = useState("");
 
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const getKelasName = (kelasId: number) => {
-    const kelas = kelasData.find((item) => item.id === kelasId);
+  // =========================
+  // LOAD DATA
+  // =========================
 
-    return kelas ? kelas.nama : "-";
-  };
+const loadData = async () => {
+  try {
+    setLoading(true);
+
+    const token = localStorage.getItem("accessToken");
+
+    const [siswaResponse, kelasResponse] = await Promise.all([
+      fetch(`${API_URL}/siswa`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+      fetch(`${API_URL}/kelas`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+    ]);
+
+    if (!siswaResponse.ok) {
+      throw new Error("Gagal mengambil data siswa");
+    }
+
+    if (!kelasResponse.ok) {
+      throw new Error("Gagal mengambil data kelas");
+    }
+
+    const siswaResult: Siswa[] = await siswaResponse.json();
+    const kelasResult: Kelas[] = await kelasResponse.json();
+
+    setData(siswaResult);
+    setKelasData(kelasResult);
+  } catch (error) {
+    console.error(error);
+
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : "Gagal mengambil data",
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // =========================
+  // KELAS OPTIONS
+  // =========================
+
+  const kelasOptions: KelasOption[] = useMemo(() => {
+    return kelasData.map((kelas) => ({
+      value: kelas.id,
+      label: `${kelas.kode} - ${kelas.nama}`,
+    }));
+  }, [kelasData]);
+
+  // =========================
+  // SEARCH
+  // =========================
 
   const filteredData = useMemo(() => {
-    const keyword = search.toLowerCase();
+    const keyword = search.toLowerCase().trim();
 
-    return data.filter((item) => {
-      const kelasName = getKelasName(item.kelasId).toLowerCase();
+    if (!keyword) {
+      return data;
+    }
+
+    return data.filter((siswa) => {
+      const kelasNama = siswa.kelas
+        ? `${siswa.kelas.kode} ${siswa.kelas.nama}`
+        : "";
 
       return (
-        item.nis.toLowerCase().includes(keyword) ||
-        item.nama.toLowerCase().includes(keyword) ||
-        kelasName.includes(keyword)
+        siswa.nis.toLowerCase().includes(keyword) ||
+        siswa.nama.toLowerCase().includes(keyword) ||
+        siswa.jk.toLowerCase().includes(keyword) ||
+        kelasNama.toLowerCase().includes(keyword)
       );
     });
   }, [data, search]);
 
-  const openAddModal = () => {
-    setEditingId(null);
+  // =========================
+  // MODAL
+  // =========================
+
+  const resetForm = () => {
     setNis("");
     setNama("");
+    setJk("");
     setKelasId("");
-    setError("");
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (item: Siswa) => {
-    setEditingId(item.id);
-    setNis(item.nis);
-    setNama(item.nama);
-    setKelasId(String(item.kelasId));
-    setError("");
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
     setEditingId(null);
-    setNis("");
-    setNama("");
-    setKelasId("");
-    setError("");
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAdd = () => {
+    resetForm();
+    setShowModal(true);
+  };
+
+  const handleEdit = (siswa: Siswa) => {
+    setEditingId(siswa.id);
+    setNis(siswa.nis);
+    setNama(siswa.nama);
+    setJk(siswa.jk);
+    setKelasId(String(siswa.kelasId));
+
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    if (saving) return;
+
+    setShowModal(false);
+    resetForm();
+  };
+
+  // =========================
+  // ERROR RESPONSE
+  // =========================
+
+  const getErrorMessage = async (response: Response) => {
+    const result = await response.json().catch(() => null);
+
+    if (Array.isArray(result?.message)) {
+      return result.message.join(", ");
+    }
+
+    return result?.message || "Terjadi kesalahan";
+  };
+
+  // =========================
+  // CREATE / UPDATE
+  // =========================
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const cleanNis = nis.trim();
-    const cleanNama = nama.trim();
-
-    if (!cleanNis || !cleanNama || !kelasId) {
-      setError("NIS, nama siswa, dan kelas wajib diisi.");
+    if (!nis.trim()) {
+      toast.error("NIS wajib diisi");
       return;
     }
 
-    const duplicateNis = data.some(
-      (item) =>
-        item.nis.toLowerCase() === cleanNis.toLowerCase() &&
-        item.id !== editingId,
-    );
-
-    if (duplicateNis) {
-      setError("NIS sudah digunakan.");
+    if (!nama.trim()) {
+      toast.error("Nama siswa wajib diisi");
       return;
     }
 
-    if (editingId !== null) {
-      setData((current) =>
-        current.map((item) =>
-          item.id === editingId
-            ? {
-                ...item,
-                nis: cleanNis,
-                nama: cleanNama,
-                kelasId: Number(kelasId),
-              }
-            : item,
-        ),
-      );
-    } else {
-      const newSiswa: Siswa = {
-        id: Date.now(),
-        nis: cleanNis,
-        nama: cleanNama,
+    if (!jk) {
+      toast.error("Jenis kelamin wajib dipilih");
+      return;
+    }
+
+    if (!kelasId) {
+      toast.error("Kelas wajib dipilih");
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const payload = {
+        nis: nis.trim(),
+        nama: nama.trim(),
+        jk,
         kelasId: Number(kelasId),
       };
 
-      setData((current) => [...current, newSiswa]);
-    }
+      const url = editingId
+        ? `${API_URL}/siswa/${editingId}`
+        : `${API_URL}/siswa`;
 
-    closeModal();
+      const method = editingId ? "PATCH" : "POST";
+
+const response = await fetch(url, {
+  method,
+  headers: getAuthHeaders(),
+  body: JSON.stringify(payload),
+});
+
+      if (!response.ok) {
+        const message = await getErrorMessage(response);
+        throw new Error(message);
+      }
+
+      toast.success(
+        editingId
+          ? "Data siswa berhasil diperbarui"
+          : "Data siswa berhasil ditambahkan",
+      );
+
+      setShowModal(false);
+      resetForm();
+
+      await loadData();
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Gagal menyimpan data siswa",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDelete = (id: number) => {
-    const siswa = data.find((item) => item.id === id);
+  // =========================
+  // DELETE
+  // =========================
 
-    if (!siswa) return;
-
+  const handleDelete = async (siswa: Siswa) => {
     const confirmed = window.confirm(
       `Apakah kamu yakin ingin menghapus siswa "${siswa.nama}"?`,
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
-    setData((current) => current.filter((item) => item.id !== id));
+    try {
+const response = await fetch(
+  `${API_URL}/siswa/${siswa.id}`,
+  {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  },
+);
+
+      if (!response.ok) {
+        const message = await getErrorMessage(response);
+        throw new Error(message);
+      }
+
+      toast.success("Data siswa berhasil dihapus");
+
+      await loadData();
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Gagal menghapus siswa",
+      );
+    }
   };
+
+  // =========================
+  // HELPERS
+  // =========================
+
+  const getKelasName = (siswa: Siswa) => {
+    if (siswa.kelas) {
+      return `${siswa.kelas.kode} - ${siswa.kelas.nama}`;
+    }
+
+    const kelas = kelasData.find(
+      (item) => item.id === siswa.kelasId,
+    );
+
+    return kelas
+      ? `${kelas.kode} - ${kelas.nama}`
+      : "-";
+  };
+
+  const selectedKelas =
+    kelasOptions.find(
+      (option) => option.value === Number(kelasId),
+    ) ?? null;
+
+  // =========================
+  // UI
+  // =========================
 
   return (
     <div className="space-y-6">
 
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
+      {/* HEADER */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-800">
             Master Siswa
           </h1>
 
           <p className="mt-1 text-sm text-gray-500">
-            Kelola data siswa yang mengikuti ulangan.
+            Kelola data siswa yang terdaftar dalam sistem.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={openAddModal}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+          onClick={handleAdd}
+          className="rounded-xl bg-yellow-400 px-5 py-3 text-sm font-semibold text-gray-900 shadow-sm transition hover:bg-yellow-500"
         >
-          <span className="text-lg leading-none">+</span>
-          Tambah Siswa
+          + Tambah Siswa
         </button>
-
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* SUMMARY */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
 
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <p className="text-sm text-gray-500">
             Total Siswa
           </p>
 
-          <p className="mt-2 text-2xl font-bold text-gray-900">
+          <p className="mt-2 text-3xl font-bold text-gray-800">
             {data.length}
           </p>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <p className="text-sm text-gray-500">
             Total Kelas
           </p>
 
-          <p className="mt-2 text-2xl font-bold text-gray-900">
+          <p className="mt-2 text-3xl font-bold text-gray-800">
             {kelasData.length}
           </p>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <p className="text-sm text-gray-500">
             Hasil Pencarian
           </p>
 
-          <p className="mt-2 text-2xl font-bold text-gray-900">
+          <p className="mt-2 text-3xl font-bold text-gray-800">
             {filteredData.length}
           </p>
         </div>
 
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      {/* TABLE CARD */}
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
 
-        {/* Toolbar */}
-        <div className="flex flex-col gap-4 border-b border-gray-100 p-5 sm:flex-row sm:items-center sm:justify-between">
+        {/* SEARCH */}
+        <div className="border-b border-gray-100 p-5">
 
-          <div className="relative w-full sm:max-w-md">
-
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              🔍
-            </span>
+          <div className="relative max-w-md">
 
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari NIS, nama, atau kelas..."
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+              placeholder="Cari NIS, nama, jenis kelamin, atau kelas..."
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100"
             />
 
           </div>
 
-          <p className="text-sm text-gray-500">
-            Menampilkan{" "}
-            <span className="font-semibold text-gray-800">
-              {filteredData.length}
-            </span>{" "}
-            siswa
-          </p>
-
         </div>
 
-        {/* Table */}
+        {/* TABLE */}
         <div className="overflow-x-auto">
 
-          <table className="w-full min-w-[750px] text-left">
+          <table className="w-full min-w-[850px] text-left">
 
             <thead className="bg-gray-50">
+              <tr>
 
-              <tr className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-
-                <th className="w-20 px-6 py-4">
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   No
                 </th>
 
-                <th className="px-6 py-4">
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   NIS
                 </th>
 
-                <th className="px-6 py-4">
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Nama Siswa
                 </th>
 
-                <th className="px-6 py-4">
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Jenis Kelamin
+                </th>
+
+                <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Kelas
                 </th>
 
-                <th className="w-48 px-6 py-4 text-center">
+                <th className="px-5 py-4 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Aksi
                 </th>
 
               </tr>
-
             </thead>
 
             <tbody className="divide-y divide-gray-100">
 
-              {filteredData.length > 0 ? (
-                filteredData.map((item, index) => (
+              {loading ? (
+
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-5 py-10 text-center text-sm text-gray-500"
+                  >
+                    Memuat data siswa...
+                  </td>
+                </tr>
+
+              ) : filteredData.length === 0 ? (
+
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-5 py-10 text-center text-sm text-gray-500"
+                  >
+                    {search
+                      ? "Data siswa tidak ditemukan."
+                      : "Belum ada data siswa."}
+                  </td>
+                </tr>
+
+              ) : (
+
+                filteredData.map((siswa, index) => (
 
                   <tr
-                    key={item.id}
+                    key={siswa.id}
                     className="transition hover:bg-gray-50"
                   >
 
-                    <td className="px-6 py-4 text-sm text-gray-500">
+                    <td className="px-5 py-4 text-sm text-gray-600">
                       {index + 1}
                     </td>
 
-                    <td className="px-6 py-4">
-
-                      <span className="font-mono text-sm font-medium text-gray-700">
-                        {item.nis}
-                      </span>
-
+                    <td className="px-5 py-4 text-sm font-medium text-gray-800">
+                      {siswa.nis}
                     </td>
 
-                    <td className="px-6 py-4">
-
-                      <div className="flex items-center gap-3">
-
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-sm font-semibold text-indigo-600">
-                          {item.nama.charAt(0).toUpperCase()}
-                        </div>
-
-                        <span className="text-sm font-medium text-gray-800">
-                          {item.nama}
-                        </span>
-
-                      </div>
-
+                    <td className="px-5 py-4 text-sm font-medium text-gray-800">
+                      {siswa.nama}
                     </td>
 
-                    <td className="px-6 py-4">
-
-                      <span className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
-                        {getKelasName(item.kelasId)}
-                      </span>
-
+                    <td className="px-5 py-4 text-sm text-gray-600">
+                      {siswa.jk === "L"
+                        ? "Laki-laki"
+                        : siswa.jk === "P"
+                          ? "Perempuan"
+                          : siswa.jk}
                     </td>
 
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-4 text-sm text-gray-600">
+                      {getKelasName(siswa)}
+                    </td>
+
+                    <td className="px-5 py-4">
 
                       <div className="flex justify-center gap-2">
 
                         <button
                           type="button"
-                          onClick={() => openEditModal(item)}
-                          className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+                          onClick={() => handleEdit(siswa)}
+                          className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-100"
                         >
                           Edit
                         </button>
 
                         <button
                           type="button"
-                          onClick={() => handleDelete(item.id)}
-                          className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                          onClick={() => handleDelete(siswa)}
+                          className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100"
                         >
                           Hapus
                         </button>
@@ -394,30 +533,6 @@ export default function Siswa() {
                   </tr>
 
                 ))
-              ) : (
-
-                <tr>
-
-                  <td
-                    colSpan={5}
-                    className="px-6 py-12 text-center"
-                  >
-
-                    <div className="text-3xl">
-                      🔎
-                    </div>
-
-                    <p className="mt-3 text-sm font-medium text-gray-700">
-                      Data siswa tidak ditemukan
-                    </p>
-
-                    <p className="mt-1 text-xs text-gray-400">
-                      Coba gunakan kata kunci pencarian lain.
-                    </p>
-
-                  </td>
-
-                </tr>
 
               )}
 
@@ -429,133 +544,167 @@ export default function Siswa() {
 
       </div>
 
-      {/* Modal */}
-      {isModalOpen && (
+      {/* MODAL */}
+      {showModal && (
 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
 
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
 
-            {/* Modal Header */}
+            {/* MODAL HEADER */}
             <div className="flex items-center justify-between border-b border-gray-100 px-6 py-5">
 
               <div>
-                <h2 className="font-semibold text-gray-900">
-                  {editingId !== null
+                <h2 className="text-lg font-bold text-gray-800">
+                  {editingId
                     ? "Edit Siswa"
                     : "Tambah Siswa"}
                 </h2>
 
                 <p className="mt-1 text-xs text-gray-500">
-                  Isi informasi siswa dengan benar.
+                  Lengkapi informasi siswa di bawah.
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={closeModal}
-                className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                onClick={handleCloseModal}
+                className="rounded-lg px-3 py-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
               >
                 ✕
               </button>
 
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit}>
+            {/* FORM */}
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-5 p-6"
+            >
 
-              <div className="space-y-5 px-6 py-6">
+              {/* NIS */}
+              <div>
 
-                {error && (
-                  <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
-                    {error}
-                  </div>
-                )}
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  NIS
+                </label>
 
-                {/* NIS */}
-                <div>
-
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    NIS
-                  </label>
-
-                  <input
-                    type="text"
-                    value={nis}
-                    onChange={(e) => setNis(e.target.value)}
-                    placeholder="Contoh: 2026001"
-                    className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none transition placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                  />
-
-                </div>
-
-                {/* Nama */}
-                <div>
-
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Nama Siswa
-                  </label>
-
-                  <input
-                    type="text"
-                    value={nama}
-                    onChange={(e) => setNama(e.target.value)}
-                    placeholder="Masukkan nama siswa"
-                    className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none transition placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                  />
-
-                </div>
-
-                {/* Kelas */}
-                <div>
-
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Kelas
-                  </label>
-
-                  <select
-                    value={kelasId}
-                    onChange={(e) => setKelasId(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                  >
-
-                    <option value="">
-                      Pilih kelas
-                    </option>
-
-                    {kelasData.map((kelas) => (
-                      <option
-                        key={kelas.id}
-                        value={kelas.id}
-                      >
-                        {kelas.nama}
-                      </option>
-                    ))}
-
-                  </select>
-
-                </div>
+                <input
+                  type="text"
+                  value={nis}
+                  onChange={(e) => setNis(e.target.value)}
+                  placeholder="Masukkan NIS"
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100"
+                />
 
               </div>
 
-              {/* Footer */}
-              <div className="flex justify-end gap-3 border-t border-gray-100 bg-gray-50 px-6 py-4">
+              {/* NAMA */}
+              <div>
+
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Nama Siswa
+                </label>
+
+                <input
+                  type="text"
+                  value={nama}
+                  onChange={(e) => setNama(e.target.value)}
+                  placeholder="Masukkan nama siswa"
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100"
+                />
+
+              </div>
+
+              {/* JK */}
+              <div>
+
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Jenis Kelamin
+                </label>
+
+                <select
+                  value={jk}
+                  onChange={(e) => setJk(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100"
+                >
+
+                  <option value="">
+                    Pilih jenis kelamin
+                  </option>
+
+                  <option value="L">
+                    Laki-laki
+                  </option>
+
+                  <option value="P">
+                    Perempuan
+                  </option>
+
+                </select>
+
+              </div>
+
+              {/* KELAS SEARCHABLE */}
+              <div>
+
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Kelas
+                </label>
+
+                {kelasData.length === 0 ? (
+
+                  <div className="rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-700">
+                    Belum ada kelas. Tambahkan data kelas terlebih dahulu.
+                  </div>
+
+                ) : (
+
+                  <Select
+                    options={kelasOptions}
+                    value={selectedKelas}
+                    onChange={(option) => {
+                      setKelasId(
+                        option
+                          ? String(option.value)
+                          : "",
+                      );
+                    }}
+                    isSearchable
+                    isClearable
+                    placeholder="Cari dan pilih kelas..."
+                    noOptionsMessage={() =>
+                      "Kelas tidak ditemukan"
+                    }
+                    className="text-sm"
+                  />
+
+                )}
+
+              </div>
+
+              {/* BUTTON */}
+              <div className="flex justify-end gap-3 border-t border-gray-100 pt-5">
 
                 <button
                   type="button"
-                  onClick={closeModal}
-                  className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
+                  onClick={handleCloseModal}
+                  disabled={saving}
+                  className="rounded-xl border border-gray-200 px-5 py-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Batal
                 </button>
 
                 <button
                   type="submit"
-                  className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                  disabled={saving || kelasData.length === 0}
+                  className="rounded-xl bg-yellow-400 px-5 py-3 text-sm font-semibold text-gray-900 transition hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {editingId !== null
-                    ? "Simpan Perubahan"
-                    : "Simpan Siswa"}
+                  {saving
+                    ? "Menyimpan..."
+                    : editingId
+                      ? "Simpan Perubahan"
+                      : "Simpan"}
                 </button>
 
               </div>

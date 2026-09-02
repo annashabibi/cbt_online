@@ -1,38 +1,24 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 type Kelas = {
   id: number;
   kode: string;
   nama: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
-const initialData: Kelas[] = [
-  {
-    id: 1,
-    kode: "XII-A",
-    nama: "XII IPA A",
-  },
-  {
-    id: 2,
-    kode: "XII-B",
-    nama: "XII IPA B",
-  },
-  {
-    id: 3,
-    kode: "XI-RPL",
-    nama: "XI RPL",
-  },
-  {
-    id: 4,
-    kode: "XII-RPL",
-    nama: "XII RPL",
-  },
-];
+const API_URL = "http://localhost:3000/kelas";
 
 export default function Kelas() {
-  const [data, setData] = useState<Kelas[]>(initialData);
-
+  const [data, setData] = useState<Kelas[]>([]);
   const [search, setSearch] = useState("");
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [error, setError] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -41,18 +27,56 @@ export default function Kelas() {
   const [kode, setKode] = useState("");
   const [nama, setNama] = useState("");
 
-  const [error, setError] = useState("");
+  // =========================
+  // GET DATA
+  // =========================
+
+  const fetchKelas = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await fetch(API_URL);
+
+      if (!response.ok) {
+        throw new Error("Gagal mengambil data kelas.");
+      }
+
+      const result = await response.json();
+
+      setData(result);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan saat mengambil data.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchKelas();
+  }, []);
+
+  // =========================
+  // SEARCH
+  // =========================
 
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const keyword = search.toLowerCase();
+    const keyword = search.toLowerCase();
 
-      return (
+    return data.filter(
+      (item) =>
         item.kode.toLowerCase().includes(keyword) ||
-        item.nama.toLowerCase().includes(keyword)
-      );
-    });
+        item.nama.toLowerCase().includes(keyword),
+    );
   }, [data, search]);
+
+  // =========================
+  // MODAL
+  // =========================
 
   const openAddModal = () => {
     setEditingId(null);
@@ -75,10 +99,15 @@ export default function Kelas() {
     setEditingId(null);
     setKode("");
     setNama("");
-    setError("");
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  // =========================
+  // CREATE / UPDATE
+  // =========================
+
+  const handleSubmit = async (
+    e: React.FormEvent<HTMLFormElement>,
+  ) => {
     e.preventDefault();
 
     const cleanKode = kode.trim();
@@ -89,60 +118,104 @@ export default function Kelas() {
       return;
     }
 
-    const duplicate = data.some(
-      (item) =>
-        item.kode.toLowerCase() === cleanKode.toLowerCase() &&
-        item.id !== editingId,
-    );
+    try {
+      setSaving(true);
+      setError("");
 
-    if (duplicate) {
-      setError("Kode kelas sudah digunakan.");
-      return;
-    }
+      const url =
+        editingId !== null
+          ? `${API_URL}/${editingId}`
+          : API_URL;
 
-    if (editingId !== null) {
-      setData((current) =>
-        current.map((item) =>
-          item.id === editingId
-            ? {
-                ...item,
-                kode: cleanKode,
-                nama: cleanNama,
-              }
-            : item,
-        ),
-      );
-    } else {
-      const newData: Kelas = {
-        id: Date.now(),
-        kode: cleanKode,
-        nama: cleanNama,
-      };
+      const method =
+        editingId !== null ? "PATCH" : "POST";
 
-      setData((current) => [...current, newData]);
-    }
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          kode: cleanKode,
+          nama: cleanNama,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.message || "Gagal menyimpan data.",
+        );
+      }
 
     closeModal();
+
+    await fetchKelas();
+
+    if (editingId !== null) {
+      toast.success("Data kelas berhasil diubah");
+    } else {
+      toast.success("Data kelas berhasil ditambahkan");
+    }
+
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDelete = (id: number) => {
-    const item = data.find((kelas) => kelas.id === id);
+  // =========================
+  // DELETE
+  // =========================
+const handleDelete = async (id: number) => {
+  const item = data.find((kelas) => kelas.id === id);
 
-    if (!item) return;
+  if (!item) return;
 
-    const confirmed = window.confirm(
-      `Apakah kamu yakin ingin menghapus kelas "${item.nama}"?`,
+  const confirmed = window.confirm(
+    `Apakah kamu yakin ingin menghapus kelas "${item.nama}"?`,
+  );
+
+  if (!confirmed) return;
+
+  try {
+    setError("");
+
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: "DELETE",
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result.message || "Gagal menghapus kelas.",
+      );
+    }
+
+    await fetchKelas();
+
+    toast.success("Data kelas berhasil dihapus");
+  } catch (err) {
+    toast.error(
+      err instanceof Error
+        ? err.message
+        : "Terjadi kesalahan.",
     );
-
-    if (!confirmed) return;
-
-    setData((current) => current.filter((kelas) => kelas.id !== id));
-  };
+  }
+};
 
   return (
     <div className="space-y-6">
 
-      {/* Header */}
+      {/* HEADER */}
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
         <div>
@@ -160,16 +233,29 @@ export default function Kelas() {
           onClick={openAddModal}
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
         >
-          <span className="text-lg leading-none">+</span>
+          <span className="text-lg leading-none">
+            +
+          </span>
+
           Tambah Kelas
         </button>
 
       </div>
 
-      {/* Table Card */}
+      {/* ERROR */}
+
+      {error && !isModalOpen && (
+        <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+          {error}
+        </div>
+      )}
+
+      {/* TABLE */}
+
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
 
-        {/* Toolbar */}
+        {/* TOOLBAR */}
+
         <div className="flex flex-col gap-4 border-b border-gray-100 p-5 sm:flex-row sm:items-center sm:justify-between">
 
           <div className="relative w-full sm:max-w-sm">
@@ -181,9 +267,11 @@ export default function Kelas() {
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) =>
+                setSearch(e.target.value)
+              }
               placeholder="Cari kode atau nama kelas..."
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm outline-none transition placeholder:text-gray-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
             />
 
           </div>
@@ -198,7 +286,8 @@ export default function Kelas() {
 
         </div>
 
-        {/* Table */}
+        {/* TABLE */}
+
         <div className="overflow-x-auto">
 
           <table className="w-full min-w-[650px] text-left">
@@ -229,7 +318,19 @@ export default function Kelas() {
 
             <tbody className="divide-y divide-gray-100">
 
-              {filteredData.length > 0 ? (
+              {loading ? (
+
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-6 py-12 text-center text-sm text-gray-500"
+                  >
+                    Memuat data...
+                  </td>
+                </tr>
+
+              ) : filteredData.length > 0 ? (
+
                 filteredData.map((item, index) => (
 
                   <tr
@@ -259,7 +360,9 @@ export default function Kelas() {
 
                         <button
                           type="button"
-                          onClick={() => openEditModal(item)}
+                          onClick={() =>
+                            openEditModal(item)
+                          }
                           className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
                         >
                           Edit
@@ -267,7 +370,9 @@ export default function Kelas() {
 
                         <button
                           type="button"
-                          onClick={() => handleDelete(item.id)}
+                          onClick={() =>
+                            handleDelete(item.id)
+                          }
                           className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
                         >
                           Hapus
@@ -280,6 +385,7 @@ export default function Kelas() {
                   </tr>
 
                 ))
+
               ) : (
 
                 <tr>
@@ -290,15 +396,16 @@ export default function Kelas() {
                   >
 
                     <div className="text-3xl">
-                      🔎
+                      📚
                     </div>
 
                     <p className="mt-3 text-sm font-medium text-gray-700">
-                      Data tidak ditemukan
+                      Belum ada data kelas
                     </p>
 
                     <p className="mt-1 text-xs text-gray-400">
-                      Coba gunakan kata kunci pencarian lain.
+                      Klik "Tambah Kelas" untuk
+                      membuat data pertama.
                     </p>
 
                   </td>
@@ -315,17 +422,20 @@ export default function Kelas() {
 
       </div>
 
-      {/* Modal */}
+      {/* MODAL */}
+
       {isModalOpen && (
 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
 
           <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
 
-            {/* Modal Header */}
+            {/* HEADER */}
+
             <div className="flex items-center justify-between border-b border-gray-100 px-6 py-5">
 
               <div>
+
                 <h2 className="font-semibold text-gray-900">
                   {editingId !== null
                     ? "Edit Kelas"
@@ -333,21 +443,23 @@ export default function Kelas() {
                 </h2>
 
                 <p className="mt-1 text-xs text-gray-500">
-                  Isi informasi kelas di bawah ini.
+                  Isi informasi kelas.
                 </p>
+
               </div>
 
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100"
               >
                 ✕
               </button>
 
             </div>
 
-            {/* Form */}
+            {/* FORM */}
+
             <form onSubmit={handleSubmit}>
 
               <div className="space-y-5 px-6 py-6">
@@ -358,7 +470,6 @@ export default function Kelas() {
                   </div>
                 )}
 
-                {/* Kode */}
                 <div>
 
                   <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -368,14 +479,15 @@ export default function Kelas() {
                   <input
                     type="text"
                     value={kode}
-                    onChange={(e) => setKode(e.target.value)}
+                    onChange={(e) =>
+                      setKode(e.target.value)
+                    }
                     placeholder="Contoh: XII-A"
-                    className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none transition placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   />
 
                 </div>
 
-                {/* Nama */}
                 <div>
 
                   <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -385,33 +497,39 @@ export default function Kelas() {
                   <input
                     type="text"
                     value={nama}
-                    onChange={(e) => setNama(e.target.value)}
+                    onChange={(e) =>
+                      setNama(e.target.value)
+                    }
                     placeholder="Contoh: XII IPA A"
-                    className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none transition placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   />
 
                 </div>
 
               </div>
 
-              {/* Footer */}
+              {/* FOOTER */}
+
               <div className="flex justify-end gap-3 border-t border-gray-100 bg-gray-50 px-6 py-4">
 
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
+                  className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
                 >
                   Batal
                 </button>
 
                 <button
                   type="submit"
-                  className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                  disabled={saving}
+                  className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {editingId !== null
-                    ? "Simpan Perubahan"
-                    : "Simpan Kelas"}
+                  {saving
+                    ? "Menyimpan..."
+                    : editingId !== null
+                      ? "Simpan Perubahan"
+                      : "Simpan Kelas"}
                 </button>
 
               </div>

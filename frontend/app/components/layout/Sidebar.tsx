@@ -1,4 +1,5 @@
-import { NavLink } from "react-router";
+import { NavLink, useNavigate } from "react-router";
+import { toast } from "sonner";
 
 const menuItems = [
   {
@@ -22,9 +23,9 @@ const menuItems = [
     ],
   },
   {
-    title: "PENILAIAN",
+    title: "PENILAIAN ESSAY",
     items: [
-      { name: "Penilaian", path: "/penilaian", icon: "✓" },
+      { name: "Penilaian Essay", path: "/penilaian", icon: "✓" },
     ],
   },
   {
@@ -36,6 +37,17 @@ const menuItems = [
 ];
 
 export default function Sidebar() {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("user");
+
+    toast.success("Berhasil logout");
+
+    navigate("/login", { replace: true });
+  };
+
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-gray-200 bg-white">
       <div className="flex h-full flex-col">
@@ -46,6 +58,7 @@ export default function Sidebar() {
             <h1 className="text-xl font-bold text-gray-900">
               UJIAN<span className="text-indigo-600">APP</span>
             </h1>
+
             <p className="text-xs text-gray-500">
               Sistem Ulangan Siswa
             </p>
@@ -55,8 +68,10 @@ export default function Sidebar() {
         {/* Menu */}
         <nav className="flex-1 overflow-y-auto px-4 py-5">
           {menuItems.map((section) => (
-            <div key={section.title} className="mb-6">
-
+            <div
+              key={section.title}
+              className="mb-6"
+            >
               <p className="mb-2 px-3 text-[11px] font-semibold tracking-wider text-gray-400">
                 {section.title}
               </p>
@@ -82,14 +97,17 @@ export default function Sidebar() {
                   </NavLink>
                 ))}
               </div>
-
             </div>
           ))}
         </nav>
 
         {/* Bottom */}
         <div className="border-t border-gray-200 p-4">
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-red-50 hover:text-red-600">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-red-50 hover:text-red-600"
+          >
             <span>↪</span>
             Logout
           </button>
