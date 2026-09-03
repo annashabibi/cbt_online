@@ -3,26 +3,40 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class HasilService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async hitungNilai(pesertaUjianId: number) {
-    const peserta = await this.prisma.pesertaUjian.findUnique({
-      where: { id: pesertaUjianId },
-      include: {
-        jawaban: {
-          include: {
-            soal: true,
+  // =========================================================
+  // HITUNG NILAI
+  // =========================================================
+  async hitungNilai(
+    pesertaUjianId: number,
+    siswaId: number,
+  ) {
+    // Pastikan peserta ujian adalah milik siswa yang login
+    const peserta =
+      await this.prisma.pesertaUjian.findFirst({
+        where: {
+          id: pesertaUjianId,
+          siswaId,
+        },
+        include: {
+          jawaban: {
+            include: {
+              soal: true,
+            },
           },
         },
-      },
-    });
+      });
 
     if (!peserta) {
-      throw new NotFoundException('Peserta ujian tidak ditemukan');
+      throw new NotFoundException(
+        'Peserta ujian tidak ditemukan',
+      );
     }
 
     if (peserta.status !== 'SELESAI') {
@@ -32,11 +46,12 @@ export class HasilService {
     }
 
     // Pastikan semua Essay sudah dinilai
-    const essayBelumDinilai = peserta.jawaban.some(
-      (jawaban) =>
-        jawaban.soal.tipe === 'ESSAY' &&
-        !jawaban.dinilai,
-    );
+    const essayBelumDinilai =
+      peserta.jawaban.some(
+        (jawaban) =>
+          jawaban.soal.tipe === 'ESSAY' &&
+          !jawaban.dinilai,
+      );
 
     if (essayBelumDinilai) {
       throw new BadRequestException(
@@ -71,12 +86,14 @@ export class HasilService {
       where: {
         pesertaUjianId,
       },
+
       update: {
         nilaiPG,
         nilaiEssay,
         nilaiAkhir,
         status: 'FINAL',
       },
+
       create: {
         pesertaUjianId,
         nilaiPG,
@@ -84,6 +101,7 @@ export class HasilService {
         nilaiAkhir,
         status: 'FINAL',
       },
+
       include: {
         pesertaUjian: {
           include: {
@@ -99,8 +117,73 @@ export class HasilService {
     });
   }
 
-  async findAll() {
-    return this.prisma.hasilUjian.findMany({
+  // =========================================================
+  // GET SEMUA HASIL MILIK SISWA
+  // =========================================================
+async findAll() {
+  return this.prisma.hasilUjian.findMany({
+    include: {
+      pesertaUjian: {
+        include: {
+          siswa: {
+            include: {
+              kelas: true,
+            },
+          },
+          ulangan: true,
+        },
+      },
+    },
+
+    orderBy: {
+      nilaiAkhir: 'desc',
+    },
+  });
+}
+
+
+async findAllForSiswa(siswaId: number) {
+  return this.prisma.hasilUjian.findMany({
+    where: {
+      pesertaUjian: {
+        siswaId,
+      },
+    },
+    include: {
+      pesertaUjian: {
+        include: {
+          siswa: {
+            include: {
+              kelas: true,
+            },
+          },
+          ulangan: true,
+        },
+      },
+    },
+    orderBy: {
+      nilaiAkhir: 'desc',
+    },
+  });
+}
+
+  // =========================================================
+  // GET DETAIL HASIL
+  // =========================================================
+ async findOne(
+  id: number,
+  siswaId: number,
+) {
+  const hasil =
+    await this.prisma.hasilUjian.findFirst({
+      where: {
+        id,
+
+        pesertaUjian: {
+          siswaId,
+        },
+      },
+
       include: {
         pesertaUjian: {
           include: {
@@ -109,19 +192,50 @@ export class HasilService {
                 kelas: true,
               },
             },
+
             ulangan: true,
+
+            jawaban: {
+              include: {
+                soal: {
+                  select: {
+                    id: true,
+                    tipe: true,
+                    pertanyaan: true,
+                    gambar: true,
+                    bobot: true,
+                    opsiA: true,
+                    opsiB: true,
+                    opsiC: true,
+                    opsiD: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
-      orderBy: {
-        nilaiAkhir: 'desc',
-      },
     });
+
+  if (!hasil) {
+    throw new NotFoundException(
+      'Hasil ujian tidak ditemukan',
+    );
   }
 
-  async findOne(id: number) {
-    const hasil = await this.prisma.hasilUjian.findUnique({
-      where: { id },
+  return hasil;
+}
+
+// =========================================================
+// GET DETAIL HASIL UNTUK ADMIN
+// =========================================================
+async findOneAdmin(id: number) {
+  const hasil =
+    await this.prisma.hasilUjian.findUnique({
+      where: {
+        id,
+      },
+
       include: {
         pesertaUjian: {
           include: {
@@ -130,7 +244,9 @@ export class HasilService {
                 kelas: true,
               },
             },
+
             ulangan: true,
+
             jawaban: {
               include: {
                 soal: true,
@@ -141,12 +257,13 @@ export class HasilService {
       },
     });
 
-    if (!hasil) {
-      throw new NotFoundException(
-        'Hasil ujian tidak ditemukan',
-      );
-    }
-
-    return hasil;
+  if (!hasil) {
+    throw new NotFoundException(
+      'Hasil ujian tidak ditemukan',
+    );
   }
+
+  return hasil;
+}
+
 }

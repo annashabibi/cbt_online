@@ -1,12 +1,12 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Param,
   ParseIntPipe,
   Patch,
   Post,
+  Delete,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -21,20 +21,28 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class UlanganController {
   constructor(private readonly ulanganService: UlanganService) {}
 
-  @Get()
-  findAll() {
-    return this.ulanganService.findAll();
-  }
+@Get()
+findAll() {
+  return this.ulanganService.findAll();
+}
 
-  @Get('saya')
-  findForSiswa(@Request() req: any) {
-    return this.ulanganService.findForSiswa(req.user.siswaId);
-  }
+@Get('saya')
+findForSiswa(@Request() req: any) {
+  return this.ulanganService.findForSiswa(
+    req.user.siswaId,
+  );
+}
 
-  @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.ulanganService.findOne(id);
-  }
+@Get(':id')
+findOne(
+  @Param('id', ParseIntPipe) id: number,
+  @Request() req: any,
+) {
+  return this.ulanganService.findOne(
+    id,
+    req.user.siswaId,
+  );
+}
 
   @Post()
   create(@Body() dto: CreateUlanganDto) {

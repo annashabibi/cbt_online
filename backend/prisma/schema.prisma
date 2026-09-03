@@ -38,6 +38,7 @@ model AkunSiswa {
   siswaId      Int     @unique
   username     String  @unique
   passwordHash String
+  role         String  @default("SISWA")
   status       Boolean @default(true)
 
   siswa Siswa @relation(fields: [siswaId], references: [id], onDelete: Cascade)

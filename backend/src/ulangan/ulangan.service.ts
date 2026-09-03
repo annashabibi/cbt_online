@@ -24,42 +24,72 @@ export class UlanganService {
     });
   }
 
-  async findForSiswa(siswaId: number) {
-    const siswa = await this.prisma.siswa.findUnique({
-      where: {
-        id: siswaId,
-      },
-    });
+async findForSiswa(siswaId: number) {
+  const siswa = await this.prisma.siswa.findUnique({
+    where: {
+      id: siswaId,
+    },
+  });
 
-    if (!siswa) {
-      throw new NotFoundException('Siswa tidak ditemukan');
-    }
-
-    return this.prisma.ulangan.findMany({
-      where: {
-        kelasId: siswa.kelasId,
-        status: true,
-      },
-      include: {
-        kelas: true,
-        soal: {
-          select: {
-            id: true,
-          },
-        },
-      },
-      orderBy: {
-        tanggal: 'asc',
-      },
-    });
+  if (!siswa) {
+    throw new NotFoundException('Siswa tidak ditemukan');
   }
 
-async findOne(id: number) {
-  const ulangan = await this.prisma.ulangan.findUnique({
-    where: { id },
+  return this.prisma.ulangan.findMany({
+    where: {
+      kelasId: siswa.kelasId,
+      status: true,
+    },
     include: {
       kelas: true,
       soal: {
+        select: {
+          id: true,
+        },
+      },
+    },
+    orderBy: {
+      tanggal: 'asc',
+    },
+  });
+}
+
+async findOne(
+  id: number,
+  siswaId: number,
+) {
+  const siswa = await this.prisma.siswa.findUnique({
+    where: {
+      id: siswaId,
+    },
+  });
+
+  if (!siswa) {
+    throw new NotFoundException(
+      'Siswa tidak ditemukan',
+    );
+  }
+
+  const ulangan = await this.prisma.ulangan.findFirst({
+    where: {
+      id,
+      kelasId: siswa.kelasId,
+      status: true,
+    },
+    include: {
+      kelas: true,
+      soal: {
+        select: {
+          id: true,
+          tipe: true,
+          pertanyaan: true,
+          gambar: true,
+          bobot: true,
+          opsiA: true,
+          opsiB: true,
+          opsiC: true,
+          opsiD: true,
+        },
         orderBy: {
           id: 'asc',
         },
@@ -68,7 +98,9 @@ async findOne(id: number) {
   });
 
   if (!ulangan) {
-    throw new NotFoundException('Ulangan tidak ditemukan');
+    throw new NotFoundException(
+      'Ulangan tidak ditemukan',
+    );
   }
 
   return ulangan;

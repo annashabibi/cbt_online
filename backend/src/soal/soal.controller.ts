@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 
@@ -25,12 +26,24 @@ export class SoalController {
     return this.soalService.findAll();
   }
 
-  @Get('ulangan/:ulanganId')
-  findByUlangan(
-    @Param('ulanganId', ParseIntPipe) ulanganId: number,
-  ) {
-    return this.soalService.findByUlangan(ulanganId);
-  }
+@Get('ulangan/:ulanganId')
+@UseGuards(JwtAuthGuard)
+findByUlangan(
+  @Param('ulanganId', ParseIntPipe) ulanganId: number,
+) {
+  return this.soalService.findByUlangan(ulanganId);
+}
+
+@Get('ujian/:ulanganId')
+findForSiswa(
+  @Param('ulanganId', ParseIntPipe) ulanganId: number,
+  @Request() req: any,
+) {
+  return this.soalService.findForSiswa(
+    ulanganId,
+    req.user.siswaId,
+  );
+}
 
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {

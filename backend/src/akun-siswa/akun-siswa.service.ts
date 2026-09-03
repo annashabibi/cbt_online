@@ -143,32 +143,31 @@ export class AkunSiswaService {
       );
     }
 
-    // Payload JWT
-    const payload = {
-      sub: akun.id,
-      siswaId: akun.siswaId,
-      username: akun.username,
-      role: 'siswa',
-    };
+const payload = {
+  sub: akun.id,
+  siswaId: akun.siswaId,
+  username: akun.username,
+  role: akun.role,
+};
 
     const accessToken =
       await this.jwtService.signAsync(payload);
 
-    return {
-      message: 'Login berhasil',
-      accessToken,
-      user: {
-        id: akun.id,
-        username: akun.username,
-        role: 'siswa',
-        siswa: {
-          id: akun.siswa.id,
-          nis: akun.siswa.nis,
-          nama: akun.siswa.nama,
-          jk: akun.siswa.jk,
-          kelas: akun.siswa.kelas,
-        },
-      },
-    };
+return {
+  message: 'Login berhasil',
+  accessToken,
+  user: {
+    id: akun.id,
+    username: akun.username,
+    role: akun.role,
+    siswa: {
+      id: akun.siswa.id,
+      nis: akun.siswa.nis,
+      nama: akun.siswa.nama,
+      jk: akun.siswa.jk,
+      kelas: akun.siswa.kelas,
+    },
+  },
+};
   }
 }

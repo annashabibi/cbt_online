@@ -13,6 +13,7 @@ import { PesertaUjianModule } from './peserta-ujian/peserta-ujian.module';
 import { JawabanModule } from './jawaban/jawaban.module';
 import { PenilaianModule } from './penilaian/penilaian.module';
 import { HasilModule } from './hasil/hasil.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
 imports: [
@@ -30,6 +31,7 @@ imports: [
   JawabanModule,
   PenilaianModule,
   HasilModule,
+  DashboardModule,
 ],
   controllers: [
     AppController,

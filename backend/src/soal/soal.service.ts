@@ -43,6 +43,57 @@ export class SoalService {
     });
   }
 
+async findForSiswa(
+  ulanganId: number,
+  siswaId: number,
+) {
+  const siswa = await this.prisma.siswa.findUnique({
+    where: {
+      id: siswaId,
+    },
+  });
+
+  if (!siswa) {
+    throw new NotFoundException(
+      'Siswa tidak ditemukan',
+    );
+  }
+
+  const ulangan = await this.prisma.ulangan.findFirst({
+    where: {
+      id: ulanganId,
+      kelasId: siswa.kelasId,
+      status: true,
+    },
+  });
+
+  if (!ulangan) {
+    throw new NotFoundException(
+      'Ulangan tidak ditemukan',
+    );
+  }
+
+  return this.prisma.soal.findMany({
+    where: {
+      ulanganId,
+    },
+    select: {
+      id: true,
+      tipe: true,
+      pertanyaan: true,
+      gambar: true,
+      bobot: true,
+      opsiA: true,
+      opsiB: true,
+      opsiC: true,
+      opsiD: true,
+    },
+    orderBy: {
+      id: 'asc',
+    },
+  });
+}
+
   async findOne(id: number) {
     const soal = await this.prisma.soal.findUnique({
       where: { id },

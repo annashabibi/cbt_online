@@ -7,6 +7,7 @@ export default function MainLayout() {
   const navigate = useNavigate();
 
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -32,16 +33,21 @@ export default function MainLayout() {
   return (
     <div className="min-h-screen bg-gray-50">
 
-      <Sidebar />
+      <Sidebar
+        collapsed={collapsed}
+        setCollapsed={setCollapsed}
+      />
 
-      <div className="ml-64">
-
+      <div
+        className={`transition-all duration-300 ${
+          collapsed ? "ml-20" : "ml-64"
+        }`}
+      >
         <Header />
 
         <main className="p-8">
           <Outlet />
         </main>
-
       </div>
 
     </div>

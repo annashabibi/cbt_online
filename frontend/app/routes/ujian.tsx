@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { BookOpen, Clock, FileText, PlayCircle } from "lucide-react";
+import {
+  BookOpen,
+  CheckCircle,
+  Clock,
+  FileText,
+  PlayCircle,
+  RotateCcw,
+} from "lucide-react";
 import { toast } from "sonner";
 
 const API_URL = "http://localhost:3000";
@@ -24,17 +31,34 @@ type Ulangan = {
   }[];
 };
 
+type PesertaUjian = {
+  id: number;
+  ulanganId: number;
+  siswaId: number;
+  mulai: string;
+  selesai: string | null;
+  status: "MENGERJAKAN" | "SELESAI" | string;
+};
+
 export default function Ujian() {
   const navigate = useNavigate();
 
   const [data, setData] = useState<Ulangan[]>([]);
+  const [pesertaData, setPesertaData] = useState<PesertaUjian[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingUjianId, setLoadingUjianId] = useState<number | null>(
+    null,
+  );
+
+  // =========================================================
+  // LOAD DATA
+  // =========================================================
 
   useEffect(() => {
-    loadUjian();
+    loadData();
   }, []);
 
-  const loadUjian = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
 
@@ -45,33 +69,72 @@ export default function Ujian() {
         return;
       }
 
-      const response = await fetch(`${API_URL}/ulangan/saya`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      // =====================================================
+      // AMBIL ULANGAN MILIK KELAS SISWA
+      // =====================================================
+
+      const ulanganResponse = await fetch(
+        `${API_URL}/ulangan/saya`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
 
-      const result = await response.json();
+      const ulanganResult = await ulanganResponse.json();
 
-      if (!response.ok) {
+      if (!ulanganResponse.ok) {
         throw new Error(
-          result.message || "Gagal mengambil data ulangan",
+          Array.isArray(ulanganResult.message)
+            ? ulanganResult.message.join(", ")
+            : ulanganResult.message ||
+                "Gagal mengambil data ulangan",
         );
       }
 
-      setData(result);
+      // =====================================================
+      // AMBIL PESERTA UJIAN MILIK SISWA
+      // =====================================================
+
+      const pesertaResponse = await fetch(
+        `${API_URL}/peserta-ujian/saya`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const pesertaResult = await pesertaResponse.json();
+
+      if (!pesertaResponse.ok) {
+        throw new Error(
+          Array.isArray(pesertaResult.message)
+            ? pesertaResult.message.join(", ")
+            : pesertaResult.message ||
+                "Gagal mengambil status ujian",
+        );
+      }
+
+      setData(ulanganResult);
+      setPesertaData(pesertaResult);
     } catch (error) {
       console.error(error);
 
       toast.error(
         error instanceof Error
           ? error.message
-          : "Gagal mengambil data ulangan",
+          : "Gagal mengambil data ujian",
       );
     } finally {
       setLoading(false);
     }
   };
+
+  // =========================================================
+  // FORMAT TANGGAL
+  // =========================================================
 
   const formatTanggal = (tanggal: string) => {
     return new Date(tanggal).toLocaleString("id-ID", {
@@ -80,13 +143,153 @@ export default function Ujian() {
     });
   };
 
-  const mulaiUjian = (ulanganId: number) => {
-    navigate(`/ujian/${ulanganId}`);
+  // =========================================================
+  // CARI PESERTA BERDASARKAN ULANGAN
+  // =========================================================
+
+  const getPeserta = (ulanganId: number) => {
+    return pesertaData.find(
+      (item) => item.ulanganId === ulanganId,
+    );
   };
+
+  // =========================================================
+  // MULAI / LANJUTKAN UJIAN
+  // =========================================================
+
+  const mulaiUjian = async (ulanganId: number) => {
+    try {
+      setLoadingUjianId(ulanganId);
+
+      const token = localStorage.getItem("accessToken");
+
+      if (!token) {
+        toast.error("Token login tidak ditemukan");
+        navigate("/login");
+        return;
+      }
+
+      // =====================================================
+      // BUAT / AMBIL PESERTA UJIAN
+      // =====================================================
+
+      const response = await fetch(
+        `${API_URL}/peserta-ujian`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            ulanganId,
+          }),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          Array.isArray(result.message)
+            ? result.message.join(", ")
+            : result.message ||
+                "Gagal memulai ujian",
+        );
+      }
+
+      const pesertaId = result.id;
+
+      if (!pesertaId) {
+        throw new Error(
+          "ID peserta ujian tidak ditemukan",
+        );
+      }
+
+      // =====================================================
+      // MULAI / LANJUTKAN PESERTA
+      // =====================================================
+
+      const mulaiResponse = await fetch(
+        `${API_URL}/peserta-ujian/${pesertaId}/mulai`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const mulaiResult =
+        await mulaiResponse.json();
+
+      if (!mulaiResponse.ok) {
+        throw new Error(
+          Array.isArray(mulaiResult.message)
+            ? mulaiResult.message.join(", ")
+            : mulaiResult.message ||
+                "Gagal memulai ujian",
+        );
+      }
+
+      // =====================================================
+      // UPDATE DATA PESERTA DI FRONTEND
+      // =====================================================
+
+      setPesertaData((prev) => {
+        const existing = prev.find(
+          (item) => item.ulanganId === ulanganId,
+        );
+
+        if (existing) {
+          return prev.map((item) =>
+            item.ulanganId === ulanganId
+              ? {
+                  ...item,
+                  ...mulaiResult,
+                }
+              : item,
+          );
+        }
+
+        return [
+          ...prev,
+          mulaiResult,
+        ];
+      });
+
+      toast.success(
+        "Ujian siap dikerjakan",
+      );
+
+      // =====================================================
+      // MASUK KE HALAMAN PENGERJAAN
+      // =====================================================
+
+      navigate(`/ujian/${ulanganId}`);
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Gagal memulai ujian",
+      );
+    } finally {
+      setLoadingUjianId(null);
+    }
+  };
+
+  // =========================================================
+  // RENDER
+  // =========================================================
 
   return (
     <div className="space-y-6">
-      {/* HEADER */}
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
+
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
           Ujian Saya
@@ -97,14 +300,23 @@ export default function Ujian() {
         </p>
       </div>
 
-      {/* CONTENT */}
+      {/* =====================================================
+          LOADING
+      ===================================================== */}
+
       {loading ? (
         <div className="rounded-xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-          <p className="text-gray-500">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
+
+          <p className="mt-4 text-gray-500">
             Memuat daftar ujian...
           </p>
         </div>
       ) : data.length === 0 ? (
+        /* ===================================================
+           EMPTY
+           =================================================== */
+
         <div className="rounded-xl border border-gray-200 bg-white p-10 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
             <BookOpen className="h-7 w-7 text-gray-400" />
@@ -115,119 +327,218 @@ export default function Ujian() {
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Saat ini belum ada ulangan yang tersedia untuk kelas kamu.
+            Saat ini belum ada ulangan yang tersedia
+            untuk kelas kamu.
           </p>
         </div>
       ) : (
+        /* ===================================================
+           LIST UJIAN
+           =================================================== */
+
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {data.map((item) => (
-            <div
-              key={item.id}
-              className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md"
-            >
-              {/* CARD HEADER */}
-              <div className="bg-blue-600 p-5 text-white">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-blue-100">
-                      {item.kode}
-                    </p>
+          {data.map((item) => {
+            const peserta = getPeserta(item.id);
 
-                    <h2 className="mt-1 text-xl font-bold">
-                      {item.judul}
-                    </h2>
-                  </div>
+            const sudahMulai =
+              peserta?.status === "MENGERJAKAN";
 
-                  <div className="rounded-xl bg-white/20 p-2">
-                    <FileText className="h-6 w-6" />
-                  </div>
-                </div>
-              </div>
+            const sudahSelesai =
+              peserta?.status === "SELESAI";
 
-              {/* CARD BODY */}
-              <div className="space-y-4 p-5">
-                {/* KELAS */}
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-blue-50 p-2">
-                    <BookOpen className="h-5 w-5 text-blue-600" />
-                  </div>
+            const sedangLoading =
+              loadingUjianId === item.id;
 
-                  <div>
-                    <p className="text-xs text-gray-500">
-                      Kelas
-                    </p>
+            return (
+              <div
+                key={item.id}
+                className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+              >
+                {/* =========================================
+                    CARD HEADER
+                    ========================================= */}
 
-                    <p className="font-medium text-gray-800">
-                      {item.kelas.nama}
-                    </p>
-                  </div>
-                </div>
-
-                {/* WAKTU */}
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-orange-50 p-2">
-                    <Clock className="h-5 w-5 text-orange-600" />
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">
-                      Jadwal
-                    </p>
-
-                    <p className="font-medium text-gray-800">
-                      {formatTanggal(item.tanggal)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* DURASI */}
-                <div className="rounded-xl bg-gray-50 p-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">
-                      Durasi
-                    </span>
-
-                    <span className="font-semibold text-gray-800">
-                      {item.durasi} menit
-                    </span>
-                  </div>
-
-                  <div className="mt-2 flex justify-between text-sm">
-                    <span className="text-gray-500">
-                      Jumlah Soal
-                    </span>
-
-                    <span className="font-semibold text-gray-800">
-                      {item.soal.length} soal
-                    </span>
-                  </div>
-                </div>
-
-                {/* DESKRIPSI */}
-                {item.deskripsi && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500">
-                      Deskripsi
-                    </p>
-
-                    <p className="mt-1 text-sm text-gray-600">
-                      {item.deskripsi}
-                    </p>
-                  </div>
-                )}
-
-                {/* BUTTON */}
-                <button
-                  type="button"
-                  onClick={() => mulaiUjian(item.id)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700"
+                <div
+                  className={`p-5 text-white ${
+                    sudahSelesai
+                      ? "bg-gray-600"
+                      : sudahMulai
+                        ? "bg-orange-500"
+                        : "bg-blue-600"
+                  }`}
                 >
-                  <PlayCircle className="h-5 w-5" />
-                  Mulai Ujian
-                </button>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide opacity-80">
+                        {item.kode}
+                      </p>
+
+                      <h2 className="mt-1 text-xl font-bold">
+                        {item.judul}
+                      </h2>
+                    </div>
+
+                    <div className="rounded-xl bg-white/20 p-2">
+                      {sudahSelesai ? (
+                        <CheckCircle className="h-6 w-6" />
+                      ) : sudahMulai ? (
+                        <RotateCcw className="h-6 w-6" />
+                      ) : (
+                        <FileText className="h-6 w-6" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* =========================================
+                    CARD BODY
+                    ========================================= */}
+
+                <div className="space-y-4 p-5">
+                  {/* STATUS */}
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">
+                      Status
+                    </span>
+
+                    {sudahSelesai ? (
+                      <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                        Selesai
+                      </span>
+                    ) : sudahMulai ? (
+                      <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+                        Sedang Dikerjakan
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+                        Belum Dikerjakan
+                      </span>
+                    )}
+                  </div>
+
+                  {/* KELAS */}
+
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg bg-blue-50 p-2">
+                      <BookOpen className="h-5 w-5 text-blue-600" />
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        Kelas
+                      </p>
+
+                      <p className="font-medium text-gray-800">
+                        {item.kelas.nama}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* WAKTU */}
+
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg bg-orange-50 p-2">
+                      <Clock className="h-5 w-5 text-orange-600" />
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        Jadwal
+                      </p>
+
+                      <p className="font-medium text-gray-800">
+                        {formatTanggal(item.tanggal)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* DURASI + SOAL */}
+
+                  <div className="rounded-xl bg-gray-50 p-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">
+                        Durasi
+                      </span>
+
+                      <span className="font-semibold text-gray-800">
+                        {item.durasi} menit
+                      </span>
+                    </div>
+
+                    <div className="mt-2 flex justify-between text-sm">
+                      <span className="text-gray-500">
+                        Jumlah Soal
+                      </span>
+
+                      <span className="font-semibold text-gray-800">
+                        {item.soal.length} soal
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* DESKRIPSI */}
+
+                  {item.deskripsi && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500">
+                        Deskripsi
+                      </p>
+
+                      <p className="mt-1 text-sm text-gray-600">
+                        {item.deskripsi}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* =======================================
+                      BUTTON
+                      ======================================= */}
+
+                  {sudahSelesai ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-gray-200 px-4 py-3 font-semibold text-gray-500"
+                    >
+                      <CheckCircle className="h-5 w-5" />
+                      Ujian Sudah Selesai
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        mulaiUjian(item.id)
+                      }
+                      disabled={sedangLoading}
+                      className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                        sudahMulai
+                          ? "bg-orange-500 hover:bg-orange-600"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      }`}
+                    >
+                      {sedangLoading ? (
+                        <>
+                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                          Memproses...
+                        </>
+                      ) : sudahMulai ? (
+                        <>
+                          <RotateCcw className="h-5 w-5" />
+                          Lanjutkan Ujian
+                        </>
+                      ) : (
+                        <>
+                          <PlayCircle className="h-5 w-5" />
+                          Mulai Ujian
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

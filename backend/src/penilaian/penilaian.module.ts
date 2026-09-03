@@ -1,11 +1,17 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '../prisma/prisma.module';
-import { AuthModule } from '../auth/auth.module';
+import { JwtModule } from '@nestjs/jwt';
+
 import { PenilaianController } from './penilaian.controller';
 import { PenilaianService } from './penilaian.service';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule],
+  imports: [
+    PrismaModule,
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'development-secret',
+    }),
+  ],
   controllers: [PenilaianController],
   providers: [PenilaianService],
 })

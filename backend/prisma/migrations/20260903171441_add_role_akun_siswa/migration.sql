@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "AkunSiswa" ADD COLUMN     "role" TEXT NOT NULL DEFAULT 'SISWA';
