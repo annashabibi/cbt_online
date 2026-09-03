@@ -8,6 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { API_URL } from "../config/api";
 
 type HasilItem = {
   id: number;
@@ -75,8 +76,8 @@ const loadData = async () => {
 
     const endpoint =
       role === "ADMIN"
-        ? "http://localhost:3000/hasil"
-        : "http://localhost:3000/hasil/saya";
+        ? `${API_URL}/hasil`
+        : `${API_URL}/hasil/saya`;
 
     const response = await fetch(endpoint, {
       headers: {
@@ -178,7 +179,7 @@ const loadData = async () => {
         const token = localStorage.getItem("accessToken");
 
         const response = await 
-        fetch(`http://localhost:3000/hasil/admin/${item.id}`, {
+        fetch(`${API_URL}/hasil/admin/${item.id}`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },

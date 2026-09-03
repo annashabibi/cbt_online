@@ -8,6 +8,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { API_URL } from "../config/api";
 
 type EssayItem = {
   id: number;
@@ -75,7 +76,7 @@ export default function Penilaian() {
       const token = localStorage.getItem("accessToken");
 
       const response = await fetch(
-        "http://localhost:3000/penilaian/essay/belum-dinilai",
+        `${API_URL}/penilaian/essay/belum-dinilai`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -149,7 +150,7 @@ export default function Penilaian() {
       const token = localStorage.getItem("accessToken");
 
       const response = await fetch(
-        `http://localhost:3000/penilaian/jawaban/${item.id}`,
+        `${API_URL}/penilaian/jawaban/${item.id}`,
         {
           method: "PATCH",
           headers: {

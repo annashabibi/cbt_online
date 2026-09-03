@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
-const API_URL = "http://localhost:3000";
+import { API_URL } from "../config/api";
 
 export default function RegisterPage() {
   const navigate = useNavigate();

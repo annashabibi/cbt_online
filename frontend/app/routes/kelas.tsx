@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { API_URL as BASE_API_URL } from "../config/api";
 
 type Kelas = {
   id: number;
@@ -9,7 +10,7 @@ type Kelas = {
   updatedAt: string;
 };
 
-const API_URL = "http://localhost:3000/kelas";
+const API_URL = `${BASE_API_URL}/kelas`;
 
 export default function Kelas() {
   const [data, setData] = useState<Kelas[]>([]);

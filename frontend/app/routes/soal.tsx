@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { API_URL } from "../config/api";
 import {
   ChevronDown,
   Plus,
@@ -14,7 +15,6 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-const API_URL = "http://localhost:3000";
 
 type Ulangan = {
   id: number;

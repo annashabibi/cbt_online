@@ -10,8 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const API_URL = "http://localhost:3000";
-
+import { API_URL } from "../config/api";
 type Ulangan = {
   id: number;
   kode: string;

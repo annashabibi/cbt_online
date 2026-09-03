@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Select from "react-select";
 import { toast } from "sonner";
-
-const API_URL = "http://localhost:3000";
+import { API_URL } from "../config/api";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("accessToken");
