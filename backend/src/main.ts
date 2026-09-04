@@ -1,13 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
-app.enableCors({
-  origin: [
-    'https://cbt-online-seven.vercel.app',
-    'https://cbt-online-cbt13.vercel.app',
-    'http://localhost:5173',
-  ],
-});
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  app.enableCors({
+    origin: [
+      process.env.FRONTEND_URL,
+      'http://localhost:5173',
+    ],
+  });
 
   await app.listen(3000);
 }
