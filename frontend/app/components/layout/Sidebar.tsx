@@ -120,7 +120,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
           {expanded ? (
             <div className="overflow-hidden whitespace-nowrap">
               <h1 className="text-xl font-bold text-gray-900">
-                UJIAN<span className="text-indigo-600">APP</span>
+                UJIAN<span className="text-indigo-600">SMKBP</span>
               </h1>
               <p className="text-xs text-gray-500">Sistem Ulangan Siswa</p>
             </div>
