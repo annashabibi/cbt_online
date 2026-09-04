@@ -576,10 +576,10 @@ if (!hasilResponse.ok) {
 
     if (loading) {
       return (
-        <div className="rounded-xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm sm:p-10">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
 
-          <p className="mt-4 text-gray-500">
+          <p className="mt-4 text-sm text-gray-500 sm:text-base">
             Memuat ujian...
           </p>
         </div>
@@ -592,8 +592,8 @@ if (!hasilResponse.ok) {
 
     if (!ulangan || !peserta) {
       return (
-        <div className="rounded-xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-          <p className="text-gray-500">
+        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm sm:p-10">
+          <p className="text-sm text-gray-500 sm:text-base">
             Data ujian tidak ditemukan.
           </p>
 
@@ -644,31 +644,31 @@ if (!hasilResponse.ok) {
   // =========================================================
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-4xl space-y-5 pb-28 sm:space-y-6 md:pb-6">
 
       {/* =====================================================
           HEADER
           ===================================================== */}
 
-      <div className="rounded-2xl bg-blue-600 p-6 text-white shadow-sm">
+      <div className="rounded-2xl bg-blue-600 p-4 text-white shadow-sm sm:p-6">
 
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-3 sm:gap-4">
 
-          <div className="rounded-xl bg-white/20 p-3">
-            <FileText className="h-7 w-7" />
+          <div className="shrink-0 rounded-xl bg-white/20 p-2.5 sm:p-3">
+            <FileText className="h-6 w-6 sm:h-7 sm:w-7" />
           </div>
 
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
 
-            <p className="text-sm text-blue-100">
+            <p className="text-xs text-blue-100 sm:text-sm">
               {ulangan.kode}
             </p>
 
-            <h1 className="mt-1 text-2xl font-bold">
+            <h1 className="mt-1 break-words text-lg font-bold leading-snug sm:text-2xl">
               {ulangan.judul}
             </h1>
 
-            <p className="mt-2 text-sm text-blue-100">
+            <p className="mt-2 break-words text-xs text-blue-100 sm:text-sm">
               {ulangan.kelas.kode} -{" "}
               {ulangan.kelas.nama}
             </p>
@@ -678,31 +678,31 @@ if (!hasilResponse.ok) {
 
         {/* INFO */}
 
-        <div className="mt-5 flex flex-wrap gap-3">
+        <div className="mt-4 flex flex-wrap gap-2 sm:mt-5 sm:gap-3">
 
-          <div className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm">
-            <Clock className="h-4 w-4" />
+          <div className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-white/10 px-3 py-2 text-xs sm:text-sm">
+            <Clock className="h-4 w-4 shrink-0" />
             {ulangan.durasi} menit
           </div>
 
           <div
-  className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${
+  className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold sm:text-sm ${
     sisaWaktu !== null && sisaWaktu <= 300
       ? "bg-red-500 text-white"
       : "bg-white/10 text-white"
   }`}
 >
-  <Clock className="h-4 w-4" />
+  <Clock className="h-4 w-4 shrink-0" />
   Waktu tersisa: {formatWaktu(sisaWaktu)}
 </div>
 
-          <div className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm">
-            <FileText className="h-4 w-4" />
+          <div className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-white/10 px-3 py-2 text-xs sm:text-sm">
+            <FileText className="h-4 w-4 shrink-0" />
             {jumlahSoal} soal
           </div>
 
-          <div className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm">
-            <CheckCircle className="h-4 w-4" />
+          <div className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-white/10 px-3 py-2 text-xs sm:text-sm">
+            <CheckCircle className="h-4 w-4 shrink-0" />
             {jumlahTerjawab} terjawab
           </div>
 
@@ -710,7 +710,7 @@ if (!hasilResponse.ok) {
 
         {/* PROGRESS BAR */}
 
-        <div className="mt-5">
+        <div className="mt-4 sm:mt-5">
 
           <div className="mb-2 flex justify-between text-xs text-blue-100">
             <span>
@@ -738,7 +738,7 @@ if (!hasilResponse.ok) {
           SOAL
           ===================================================== */}
 
-      <div className="space-y-5">
+      <div className="space-y-4 sm:space-y-5">
 
         {ulangan.soal.map(
           (soal, index) => {
@@ -749,22 +749,22 @@ if (!hasilResponse.ok) {
             return (
               <div
                 key={soal.id}
-                className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+                className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6"
               >
 
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-3 sm:gap-4">
 
                   {/* NOMOR SOAL */}
 
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 font-bold text-blue-700">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 sm:h-9 sm:w-9 sm:text-base">
                     {index + 1}
                   </div>
 
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
 
                     {/* HEADER SOAL */}
 
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
 
                       <span className="text-xs font-medium uppercase text-gray-400">
                         {soal.tipe}
@@ -778,7 +778,7 @@ if (!hasilResponse.ok) {
 
                     {/* PERTANYAAN */}
 
-                    <p className="mt-3 text-base font-medium leading-7 text-gray-900">
+                    <p className="mt-3 break-words text-sm font-medium leading-6 text-gray-900 sm:text-base sm:leading-7">
                       {soal.pertanyaan}
                     </p>
 
@@ -788,7 +788,7 @@ if (!hasilResponse.ok) {
                       <img
                         src={soal.gambar}
                         alt="Gambar soal"
-                        className="mt-4 max-h-72 rounded-xl border object-contain"
+                        className="mt-4 max-h-72 w-full rounded-xl border object-contain"
                       />
                     )}
 
@@ -797,7 +797,7 @@ if (!hasilResponse.ok) {
                         ================================================= */}
 
                   {soal.tipe === "PG" && (
-  <div className="mt-5 space-y-3">
+  <div className="mt-4 space-y-2.5 sm:mt-5 sm:space-y-3">
     {(
       [
         ["A", soal.opsiA],
@@ -815,7 +815,7 @@ if (!hasilResponse.ok) {
       return (
         <label
           key={label}
-          className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition ${
+          className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition active:scale-[0.99] sm:p-4 ${
             selected
               ? "border-blue-500 bg-blue-50"
               : "border-gray-200 hover:bg-gray-50"
@@ -829,14 +829,14 @@ if (!hasilResponse.ok) {
             onChange={(e) =>
               handleJawaban(soal.id, e.target.value)
             }
-            className="h-4 w-4"
+            className="mt-0.5 h-4 w-4 shrink-0"
           />
 
-          <span className="font-semibold text-gray-700">
+          <span className="shrink-0 font-semibold text-gray-700">
             {label}.
           </span>
 
-          <span className="text-gray-700">
+          <span className="break-words text-sm text-gray-700 sm:text-base">
             {text}
           </span>
         </label>
@@ -850,7 +850,7 @@ if (!hasilResponse.ok) {
 
                     {soal.tipe ===
                       "ESSAY" && (
-                      <div className="mt-5">
+                      <div className="mt-4 sm:mt-5">
 
                         <textarea
                           value={
@@ -874,7 +874,7 @@ if (!hasilResponse.ok) {
                           }
                           rows={5}
                           placeholder="Tulis jawaban kamu di sini..."
-                          className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          className="w-full resize-none rounded-xl border border-gray-300 px-3 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:px-4 sm:text-base"
                         />
 
                         <p className="mt-2 text-xs text-gray-400">
@@ -899,7 +899,7 @@ if (!hasilResponse.ok) {
                     {currentAnswer &&
                       saving !== soal.id && (
                         <div className="mt-3 flex items-center gap-2 text-xs text-green-600">
-                          <CheckCircle className="h-4 w-4" />
+                          <CheckCircle className="h-4 w-4 shrink-0" />
 
                           Jawaban tersimpan
                         </div>
@@ -918,19 +918,19 @@ if (!hasilResponse.ok) {
           FOOTER
           ===================================================== */}
 
-      <div className="sticky bottom-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-lg">
+      <div className="sticky bottom-20 z-30 rounded-2xl border border-gray-200 bg-white p-4 shadow-lg sm:bottom-4 sm:p-5">
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
 
           {/* KIRI */}
 
-          <div>
+          <div className="min-w-0">
 
             <p className="text-sm font-semibold text-gray-800">
               Progress pengerjaan
             </p>
 
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-xs text-gray-500 sm:text-sm">
               {jumlahTerjawab} dari{" "}
               {jumlahSoal} soal sudah
               dijawab
@@ -940,7 +940,7 @@ if (!hasilResponse.ok) {
 
           {/* KANAN */}
 
-          <div className="flex gap-3">
+          <div className="grid grid-cols-2 gap-2.5 sm:flex sm:gap-3">
 
             <button
               type="button"
@@ -948,9 +948,9 @@ if (!hasilResponse.ok) {
                 navigate("/ujian")
               }
               disabled={submitting}
-              className="flex items-center gap-2 rounded-xl border border-gray-300 px-5 py-3 font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition active:scale-[0.98] hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 sm:px-5 sm:py-3 sm:text-base"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4 shrink-0" />
 
               Kembali
             </button>
@@ -961,11 +961,11 @@ if (!hasilResponse.ok) {
                 bukaModalSelesai
               }
               disabled={submitting}
-              className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition active:scale-[0.98] hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 sm:px-5 sm:py-3 sm:text-base"
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-4 w-4 shrink-0" />
 
-              Selesai Ujian
+              Selesai
             </button>
 
           </div>
@@ -977,15 +977,15 @@ if (!hasilResponse.ok) {
           ===================================================== */}
 
       {showModalSelesai && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
 
-          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+          <div className="w-full max-w-md rounded-t-3xl bg-white shadow-2xl sm:rounded-2xl">
 
             {/* HEADER MODAL */}
 
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5">
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 sm:px-6 sm:py-5">
 
-              <h2 className="text-lg font-bold text-gray-900">
+              <h2 className="text-base font-bold text-gray-900 sm:text-lg">
                 Selesaikan Ujian?
               </h2>
 
@@ -995,7 +995,7 @@ if (!hasilResponse.ok) {
                   tutupModalSelesai
                 }
                 disabled={submitting}
-                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:cursor-not-allowed"
+                className="shrink-0 rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:cursor-not-allowed"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1004,15 +1004,15 @@ if (!hasilResponse.ok) {
 
             {/* BODY */}
 
-            <div className="p-6">
+            <div className="p-5 sm:p-6">
 
-              <div className="flex gap-4 rounded-xl bg-orange-50 p-4">
+              <div className="flex gap-3 rounded-xl bg-orange-50 p-4 sm:gap-4">
 
                 <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-orange-500" />
 
-                <div>
+                <div className="min-w-0">
 
-                  <p className="font-semibold text-orange-800">
+                  <p className="text-sm font-semibold text-orange-800 sm:text-base">
                     Periksa kembali jawaban
                     kamu.
                   </p>
@@ -1042,7 +1042,7 @@ if (!hasilResponse.ok) {
 
             {/* FOOTER MODAL */}
 
-            <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+            <div className="flex flex-col-reverse gap-2.5 border-t border-gray-200 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex-row sm:justify-end sm:gap-3 sm:px-6 sm:pb-4">
 
               <button
                 type="button"
@@ -1050,7 +1050,7 @@ if (!hasilResponse.ok) {
                   tutupModalSelesai
                 }
                 disabled={submitting}
-                className="rounded-xl border border-gray-300 px-5 py-2.5 font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 sm:text-base"
               >
                 Batal
               </button>
@@ -1059,18 +1059,18 @@ if (!hasilResponse.ok) {
                 type="button"
                 onClick={selesaiUjian}
                 disabled={submitting}
-                className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60 sm:text-base"
               >
 
                 {submitting ? (
                   <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    <div className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white/30 border-t-white" />
 
                     Menyelesaikan...
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="h-4 w-4" />
+                    <CheckCircle className="h-4 w-4 shrink-0" />
 
                     Ya, Selesaikan
                   </>
