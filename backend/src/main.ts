@@ -4,7 +4,7 @@ import { AppModule } from './app.module';
 app.enableCors({
   origin: [
     'https://cbt-online-seven.vercel.app',
-    'https://cbt-online-cbt12.vercel.app',
+    'https://cbt-online-cbt13.vercel.app',
     'http://localhost:5173',
   ],
 });
