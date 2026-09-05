@@ -17,6 +17,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { AbsensiModule } from './absensi/absensi.module';
 import { MataPelajaranModule } from './mata-pelajaran/mata-pelajaran.module';
 import { SemesterModule } from './semester/semester.module';
+import { ModulAjarModule } from './modul-ajar/modul-ajar.module';
 @Module({
 imports: [
   ConfigModule.forRoot({
@@ -37,6 +38,7 @@ imports: [
   AbsensiModule,
   MataPelajaranModule,
   SemesterModule,
+  ModulAjarModule,
 ],
   controllers: [
     AppController,

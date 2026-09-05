@@ -1,16 +1,18 @@
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "postgresql"
 }
 
 model Kelas {
-  id      Int       @id @default(autoincrement())
-  kode    String    @unique
-  nama    String
-  siswa   Siswa[]
-  ulangan Ulangan[]
+  id        Int         @id @default(autoincrement())
+  kode      String      @unique
+  nama      String
+  siswa     Siswa[]
+  ulangan   Ulangan[]
+  modulAjar ModulAjar[]
 
   absensiPertemuan AbsensiPertemuan[]
 
@@ -145,6 +147,7 @@ model MataPelajaran {
   nama String
 
   absensiPertemuan AbsensiPertemuan[]
+  modulAjar        ModulAjar[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -156,6 +159,7 @@ model Semester {
   semester    String
 
   absensiPertemuan AbsensiPertemuan[]
+  modulAjar        ModulAjar[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -195,4 +199,83 @@ model AbsensiSiswa {
   updatedAt DateTime @updatedAt
 
   @@unique([absensiPertemuanId, siswaId])
+}
+
+model ModulAjar {
+  id Int @id @default(autoincrement())
+
+  namaPenyusun        String
+  programKeahlian     String?
+  judulElemen         String?
+  capaianPembelajaran String?
+
+  kelasId         Int
+  mataPelajaranId Int
+  semesterId      Int
+
+  kelas         Kelas         @relation(fields: [kelasId], references: [id], onDelete: Cascade)
+  mataPelajaran MataPelajaran @relation(fields: [mataPelajaranId], references: [id], onDelete: Cascade)
+  semester      Semester      @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+
+  tujuanPembelajaran   TujuanPembelajaran[]
+  kegiatanPembelajaran KegiatanPembelajaran[]
+  asesmen              Asesmen[]
+
+  pengayaan            String?
+  remedial             String?
+  refleksiPesertaDidik String?
+  refleksiGuru         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TujuanPembelajaran {
+  id Int @id @default(autoincrement())
+
+  modulAjarId Int
+  tujuan      String
+  urutan      Int
+
+  modulAjar ModulAjar @relation(fields: [modulAjarId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([modulAjarId])
+}
+
+model KegiatanPembelajaran {
+  id Int @id @default(autoincrement())
+
+  modulAjarId Int
+
+  jenis     String
+  aktivitas String
+  durasi    Int?
+  urutan    Int
+
+  modulAjar ModulAjar @relation(fields: [modulAjarId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([modulAjarId])
+}
+
+model Asesmen {
+  id Int @id @default(autoincrement())
+
+  modulAjarId Int
+
+  jenis     String
+  deskripsi String
+  urutan    Int
+
+  modulAjar ModulAjar @relation(fields: [modulAjarId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([modulAjarId])
 }

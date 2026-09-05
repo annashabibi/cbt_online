@@ -28,6 +28,14 @@ const adminMenuItems = [
     title: "PENILAIAN ESSAY",
     items: [{ name: "Penilaian Essay", path: "/penilaian", icon: "✓" }],
   },
+
+{
+  title: "PEMBELAJARAN",
+  items: [
+    { name: "Modul Ajar", path: "/modul-ajar", icon: "▤" },
+  ],
+},
+
  {
   title: "LAPORAN",
   items: [

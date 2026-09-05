@@ -14,6 +14,8 @@ export default [
     route("penilaian", "routes/penilaian.tsx"),
     route("hasil", "routes/hasil.tsx"),
     route("absensi", "routes/absensi.tsx"),
+route("modul-ajar", "routes/modul-ajar.tsx"),
+route("modul-ajar/tambah", "routes/modul-ajar-tambah.tsx"),
     route("ujian", "routes/ujian.tsx"),
 route("ujian/:id", "routes/kerjakan-ujian.tsx"),
   ]),
