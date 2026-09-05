@@ -1,12 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+
 import { API_URL } from "../config/api";
 type Kelas = {
   id: number;
   kode: string;
   nama: string;
 };
+
+type ProgressUlangan = {
+  totalSiswa: number;
+  mengerjakan: number;
+  selesai: number;
+  belumMengerjakan: number;
+  daftarBelumMengerjakan: {
+    id: number;
+    nama: string;
+    nis: string;
+  }[];
+};
+
+
 
 type Ulangan = {
   id: number;
@@ -57,9 +72,21 @@ export default function Ulangan() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
+const [progressData, setProgressData] = useState<
+  Record<number, ProgressUlangan>
+>({});
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
+
+
+  const [showProgressModal, setShowProgressModal] =
+  useState(false);
+
+const [selectedUlangan, setSelectedUlangan] =
+  useState<Ulangan | null>(null);
+
+const [nomorWhatsapp, setNomorWhatsapp] =
+  useState<Record<number, string>>({});
 
   const loadData = async () => {
     try {
@@ -107,8 +134,50 @@ export default function Ulangan() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+  loadData();
+}, []);
+
+useEffect(() => {
+  if (data.length === 0) return;
+
+  data.forEach((item) => {
+    loadProgress(item.id);
+  });
+}, [data]);
+
+const loadProgress = async (ulanganId: number) => {
+  try {
+    const token = localStorage.getItem("accessToken");
+
+    const response = await fetch(
+      `${API_URL}/ulangan/${ulanganId}/progress`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        "Gagal mengambil progress ulangan",
+      );
+    }
+
+    const result: ProgressUlangan =
+      await response.json();
+
+    setProgressData((prev) => ({
+      ...prev,
+      [ulanganId]: result,
+    }));
+  } catch (error) {
+    console.error(
+      `Gagal mengambil progress ulangan ${ulanganId}:`,
+      error,
+    );
+  }
+};
 
   const filteredData = useMemo(() => {
     const keyword = search.toLowerCase();
@@ -163,6 +232,58 @@ export default function Ulangan() {
     setEditId(null);
     setForm(initialForm);
   };
+
+  const openProgressModal = (item: Ulangan) => {
+  setSelectedUlangan(item);
+  setShowProgressModal(true);
+};
+
+const closeProgressModal = () => {
+  setSelectedUlangan(null);
+  setShowProgressModal(false);
+};
+
+const kirimWhatsApp = (
+  siswaId: number,
+  namaSiswa: string,
+) => {
+  const nomor = nomorWhatsapp[siswaId]?.trim();
+
+  if (!nomor) {
+    toast.error(
+      `Nomor WhatsApp untuk ${namaSiswa} belum diisi`,
+    );
+    return;
+  }
+
+  let nomorTujuan = nomor.replace(/\D/g, "");
+
+  if (nomorTujuan.startsWith("0")) {
+    nomorTujuan =
+      "62" + nomorTujuan.substring(1);
+  }
+
+  if (!nomorTujuan.startsWith("62")) {
+    toast.error(
+      "Nomor WhatsApp harus menggunakan nomor Indonesia",
+    );
+    return;
+  }
+
+  const judul =
+    selectedUlangan?.judul ||
+    "Ulangan";
+
+  const pesan =
+    `Halo, kami ingin menginformasikan bahwa ${namaSiswa} belum mengerjakan ${judul}. ` +
+    `Mohon untuk segera mengerjakan ulangan melalui sistem CBT. Terima kasih.`;
+
+  const url =
+    `https://wa.me/${nomorTujuan}?text=` +
+    encodeURIComponent(pesan);
+
+  window.open(url, "_blank");
+};
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -354,9 +475,26 @@ export default function Ulangan() {
                 <th className="px-4 py-3">Judul</th>
                 <th className="px-4 py-3">Kelas</th>
                 <th className="px-4 py-3">Tanggal</th>
-                <th className="px-4 py-3">Durasi</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-center">Aksi</th>
+               <th className="px-4 py-3">Durasi</th>
+<th className="px-4 py-3 text-center">
+  Total Siswa
+</th>
+
+<th className="px-4 py-3 text-center">
+  Mengerjakan
+</th>
+
+<th className="px-4 py-3 text-center">
+  Selesai
+</th>
+
+<th className="px-4 py-3 text-center">
+  Belum Mengerjakan
+</th>
+<th className="px-4 py-3">Status</th>
+<th className="px-4 py-3 text-center">
+  Aksi
+</th>
               </tr>
             </thead>
 
@@ -364,7 +502,7 @@ export default function Ulangan() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={12}
                     className="px-4 py-10 text-center text-gray-500"
                   >
                     Memuat data...
@@ -373,7 +511,7 @@ export default function Ulangan() {
               ) : filteredData.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={12}
                     className="px-4 py-10 text-center text-gray-500"
                   >
                     {search
@@ -382,11 +520,14 @@ export default function Ulangan() {
                   </td>
                 </tr>
               ) : (
-                filteredData.map((item, index) => (
-                  <tr
-                    key={item.id}
-                    className="transition hover:bg-gray-50"
-                  >
+               filteredData.map((item, index) => {
+  const progress = progressData[item.id];
+
+  return (
+    <tr
+      key={item.id}
+      className="transition hover:bg-gray-50"
+    >
                     <td className="px-4 py-3">
                       {index + 1}
                     </td>
@@ -416,6 +557,62 @@ export default function Ulangan() {
                     <td className="px-4 py-3">
                       {item.durasi} menit
                     </td>
+                    <td className="px-4 py-3 text-center">
+  {progress ? (
+    <span className="font-semibold text-gray-800">
+      {progress.totalSiswa}
+    </span>
+  ) : (
+    <span className="text-gray-400">
+      ...
+    </span>
+  )}
+</td>
+
+<td className="px-4 py-3 text-center">
+  {progress ? (
+    <span className="font-semibold text-blue-600">
+      {progress.mengerjakan}
+    </span>
+  ) : (
+    <span className="text-gray-400">
+      ...
+    </span>
+  )}
+</td>
+
+<td className="px-4 py-3 text-center">
+  {progress ? (
+    <span className="font-semibold text-green-600">
+      {progress.selesai}
+    </span>
+  ) : (
+    <span className="text-gray-400">
+      ...
+    </span>
+  )}
+</td>
+
+<td className="px-4 py-3 text-center">
+  {progress ? (
+   <button
+  type="button"
+  disabled={progress.belumMengerjakan === 0}
+  onClick={() => openProgressModal(item)}
+  className={`font-semibold ${
+    progress.belumMengerjakan > 0
+      ? "text-red-600 hover:text-red-800 hover:underline"
+      : "text-green-600"
+  }`}
+>
+  {progress.belumMengerjakan}
+</button>
+  ) : (
+    <span className="text-gray-400">
+      ...
+    </span>
+  )}
+</td>
 
                     <td className="px-4 py-3">
                       {item.status ? (
@@ -448,8 +645,7 @@ export default function Ulangan() {
                         </button>
                       </div>
                     </td>
-                  </tr>
-                ))
+                  </tr>)})
               )}
             </tbody>
           </table>
@@ -633,6 +829,196 @@ export default function Ulangan() {
           </div>
         </div>
       )}
+      {/* POPUP SISWA BELUM MENGERJAKAN */}
+{showProgressModal &&
+  selectedUlangan &&
+  (() => {
+    const progress =
+      progressData[selectedUlangan.id];
+
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+        <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl">
+          {/* HEADER */}
+          <div className="flex items-center justify-between border-b px-6 py-4">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">
+                Siswa Belum Mengerjakan
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-500">
+                {selectedUlangan.judul}
+              </p>
+
+              <p className="text-xs text-gray-400">
+                Kelas:{" "}
+                {selectedUlangan.kelas.nama}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={closeProgressModal}
+              className="text-2xl text-gray-400 hover:text-gray-700"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* RINGKASAN */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 border-b bg-gray-50 p-5">
+            <div className="rounded-lg bg-white p-3 text-center shadow-sm">
+              <div className="text-xs text-gray-500">
+                Total Siswa
+              </div>
+
+              <div className="mt-1 text-xl font-bold text-gray-900">
+                {progress?.totalSiswa ?? 0}
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-white p-3 text-center shadow-sm">
+              <div className="text-xs text-gray-500">
+                Mengerjakan
+              </div>
+
+              <div className="mt-1 text-xl font-bold text-blue-600">
+{progress?.mengerjakan ?? 0}
+              </div>
+            </div>
+            <div className="rounded-lg bg-white p-3 text-center shadow-sm">
+  <div className="text-xs text-gray-500">
+    Selesai
+  </div>
+
+  <div className="mt-1 text-xl font-bold text-green-600">
+    {progress?.selesai ?? 0}
+  </div>
+</div>
+
+            <div className="rounded-lg bg-white p-3 text-center shadow-sm">
+              <div className="text-xs text-gray-500">
+                Belum Mengerjakan
+              </div>
+
+              <div className="mt-1 text-xl font-bold text-red-600">
+                {progress?.belumMengerjakan ?? 0}
+              </div>
+            </div>
+          </div>
+
+          {/* DAFTAR */}
+          <div className="max-h-[55vh] overflow-y-auto p-5">
+            {!progress ? (
+              <div className="py-10 text-center text-gray-500">
+                Memuat data...
+              </div>
+            ) : progress.daftarBelumMengerjakan
+                .length === 0 ? (
+              <div className="rounded-lg bg-green-50 p-6 text-center">
+                <p className="font-semibold text-green-700">
+                  Semua siswa sudah mengerjakan
+                  ulangan.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-lg border border-gray-200">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-50 text-xs uppercase text-gray-600">
+                    <tr>
+                      <th className="px-4 py-3">
+                        No
+                      </th>
+
+                      <th className="px-4 py-3">
+                        NIS
+                      </th>
+
+                      <th className="px-4 py-3">
+                        Nama Siswa
+                      </th>
+
+                    <th className="px-4 py-3">
+  Nomor WhatsApp
+</th>
+
+<th className="px-4 py-3 text-center">
+  Aksi
+</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-gray-100">
+                    {progress.daftarBelumMengerjakan.map(
+                      (siswa, index) => (
+                        <tr
+                          key={siswa.id}
+                          className="hover:bg-gray-50"
+                        >
+                          <td className="px-4 py-3">
+                            {index + 1}
+                          </td>
+
+                          <td className="px-4 py-3">
+                            {siswa.nis || "-"}
+                          </td>
+
+                          <td className="px-4 py-3 font-medium text-gray-900">
+                            {siswa.nama}
+                          </td>
+
+                         <td className="px-4 py-3">
+  <input
+    type="tel"
+    placeholder="08xxxxxxxxxx"
+    value={nomorWhatsapp[siswa.id] || ""}
+    onChange={(e) =>
+      setNomorWhatsapp((prev) => ({
+        ...prev,
+        [siswa.id]: e.target.value,
+      }))
+    }
+    className="w-full min-w-[170px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100"
+  />
+</td>
+
+<td className="px-4 py-3 text-center">
+  <button
+    type="button"
+    onClick={() =>
+      kirimWhatsApp(
+        siswa.id,
+        siswa.nama,
+      )
+    }
+    className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700"
+  >
+    WhatsApp
+  </button>
+</td>
+                        </tr>
+                      ),
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* FOOTER */}
+          <div className="flex justify-end border-t bg-gray-50 px-6 py-4">
+            <button
+              type="button"
+              onClick={closeProgressModal}
+              className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  })()}
     </div>
   );
 }

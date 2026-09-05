@@ -33,6 +33,13 @@ findForSiswa(@Request() req: any) {
   );
 }
 
+@Get(':id/progress')
+getProgress(
+  @Param('id', ParseIntPipe) id: number,
+) {
+  return this.ulanganService.getProgress(id);
+}
+
 @Get(':id')
 findOne(
   @Param('id', ParseIntPipe) id: number,

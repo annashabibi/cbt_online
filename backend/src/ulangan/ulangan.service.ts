@@ -105,6 +105,113 @@ async findOne(
 
   return ulangan;
 }
+
+
+  // =========================================================
+  // PROGRESS SISWA MENGERJAKAN ULANGAN
+  // =========================================================
+  
+// =========================================================
+// PROGRESS SISWA MENGERJAKAN ULANGAN
+// =========================================================
+async getProgress(id: number) {
+  const ulangan = await this.prisma.ulangan.findUnique({
+    where: { id },
+    include: {
+      kelas: true,
+    },
+  });
+
+  if (!ulangan) {
+    throw new NotFoundException('Ulangan tidak ditemukan');
+  }
+
+  // Ambil semua siswa yang berada di kelas ulangan
+  const semuaSiswa = await this.prisma.siswa.findMany({
+    where: {
+      kelasId: ulangan.kelasId,
+    },
+    orderBy: {
+      nama: 'asc',
+    },
+  });
+
+  // Ambil peserta yang sudah masuk/mengerjakan ulangan
+  const peserta = await this.prisma.pesertaUjian.findMany({
+    where: {
+      ulanganId: id,
+    },
+    select: {
+      siswaId: true,
+      status: true,
+      mulai: true,
+      selesai: true,
+    },
+  });
+
+  // Mapping siswaId -> data peserta
+  const pesertaMap = new Map(
+    peserta.map((item) => [item.siswaId, item]),
+  );
+
+  // Sedang mengerjakan
+  const mengerjakan = semuaSiswa.filter(
+    (siswa) =>
+      pesertaMap.get(siswa.id)?.status === 'MENGERJAKAN',
+  );
+
+  // Sudah selesai
+  const selesai = semuaSiswa.filter(
+    (siswa) =>
+      pesertaMap.get(siswa.id)?.status === 'SELESAI',
+  );
+
+  // Belum pernah masuk/mengerjakan
+  const belumMengerjakan = semuaSiswa.filter(
+    (siswa) => !pesertaMap.has(siswa.id),
+  );
+
+  return {
+    ulangan: {
+      id: ulangan.id,
+      kode: ulangan.kode,
+      judul: ulangan.judul,
+      kelas: ulangan.kelas,
+    },
+
+    totalSiswa: semuaSiswa.length,
+
+    mengerjakan: mengerjakan.length,
+
+    selesai: selesai.length,
+
+    belumMengerjakan: belumMengerjakan.length,
+
+    daftarBelumMengerjakan: belumMengerjakan.map(
+      (siswa) => ({
+        id: siswa.id,
+        nama: siswa.nama,
+        nis: siswa.nis,
+      }),
+    ),
+
+    daftarSudahMengerjakan: semuaSiswa
+      .filter((siswa) => pesertaMap.has(siswa.id))
+      .map((siswa) => {
+        const dataPeserta = pesertaMap.get(siswa.id);
+
+        return {
+          id: siswa.id,
+          nama: siswa.nama,
+          nis: siswa.nis,
+          status: dataPeserta?.status || null,
+          mulai: dataPeserta?.mulai || null,
+          selesai: dataPeserta?.selesai || null,
+        };
+      }),
+  };
+}
+  
   async create(dto: CreateUlanganDto) {
     const kelas = await this.prisma.kelas.findUnique({
       where: {
