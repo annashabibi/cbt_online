@@ -11,7 +11,14 @@ type Siswa = { id: number; nis: string; nama: string; jk: string; kelasId: numbe
 type Pertemuan = { id: number; pertemuanKe: number; tanggal: string };
 type AbsensiData = { id: number; absensiPertemuanId: number; siswaId: number; status: string | null };
 type StatusKehadiran = "H" | "I" | "S" | "A";
-
+type SiswaPerhatian = Siswa & {
+  hadir: number;
+  izin: number;
+  sakit: number;
+  alpa: number;
+  persentase: number;
+  alasan: string;
+};
 type ActiveCell = {
   siswaId: number;
   pertemuanKe: number;
@@ -82,7 +89,8 @@ export default function Absensi() {
 
   // ---- Popover pilih status ----
   const [activeCell, setActiveCell] = useState<ActiveCell | null>(null);
-
+const [showPerhatianModal, setShowPerhatianModal] = useState(false);
+const [nomorWhatsapp, setNomorWhatsapp] = useState<Record<number, string>>({});
   const isFilterComplete = Boolean(kelasId && mataPelajaranId && semesterId);
 
   // ================= FETCH MASTER DATA =================
@@ -221,6 +229,46 @@ export default function Absensi() {
       perluPerhatian,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [siswa, absensiData, pertemuan]);
+
+    // ================= SISWA PERLU PERHATIAN =================
+  const siswaPerluPerhatian = useMemo<SiswaPerhatian[]>(() => {
+    return siswa
+      .map((item) => {
+        const rekap = getRekapSiswa(item.id);
+
+        const alasan = [];
+
+        if (rekap.alpa > 0) {
+          alasan.push(`Alpa ${rekap.alpa}x`);
+        }
+
+        if (rekap.izin > 0) {
+          alasan.push(`Izin ${rekap.izin}x`);
+        }
+
+        if (rekap.sakit > 0) {
+          alasan.push(`Sakit ${rekap.sakit}x`);
+        }
+
+        if (rekap.persentase < 75 && rekap.hadir + rekap.izin + rekap.sakit + rekap.alpa > 0) {
+          alasan.push("Kehadiran di bawah 75%");
+        }
+
+        const perluPerhatian =
+          rekap.alpa >= 1 ||
+          (rekap.persentase < 75 &&
+            rekap.hadir + rekap.izin + rekap.sakit + rekap.alpa > 0);
+
+        if (!perluPerhatian) return null;
+
+        return {
+          ...item,
+          ...rekap,
+          alasan: alasan.join(" • "),
+        };
+      })
+      .filter((item): item is SiswaPerhatian => item !== null);
   }, [siswa, absensiData, pertemuan]);
 
   const filteredSiswa = useMemo(() => {
@@ -521,8 +569,19 @@ export default function Absensi() {
             accent="border-sky-100"
           />
           <StatCard icon="📊" label="Rata-rata Hadir" value={`${ringkasan.rataRata}%`} accent="border-emerald-100" />
-          <StatCard icon="⚠️" label="Perlu Perhatian" value={String(ringkasan.perluPerhatian)} accent="border-amber-100" />
-        </div>
+<button
+
+  type="button"
+  onClick={() => setShowPerhatianModal(true)}
+  className="text-left transition hover:-translate-y-0.5 hover:shadow-md"
+>
+  <StatCard
+    icon="⚠️"
+    label="Perlu Perhatian"
+    value={String(siswaPerluPerhatian.length)}
+    accent="border-amber-100"
+  />
+</button>        </div>
       )}
 
       {/* Konten utama */}
@@ -876,6 +935,210 @@ export default function Absensi() {
           document.body,
         )}
 
+      {/* ================= MODAL SISWA PERLU PERHATIAN ================= */}
+      {showPerhatianModal && (
+        <div
+          className="no-print fixed inset-0 z-[70] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
+          onClick={() => setShowPerhatianModal(false)}
+        >
+          <div
+            className="animate-modalIn flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  ⚠️ Siswa Perlu Perhatian
+                </h3>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  {siswaPerluPerhatian.length} siswa membutuhkan perhatian
+                  terkait kehadiran.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowPerhatianModal(false)}
+                className="rounded-lg px-3 py-2 text-xl text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="overflow-y-auto p-6">
+              {siswaPerluPerhatian.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-300 py-12 text-center">
+                  <div className="text-4xl">🎉</div>
+                  <p className="mt-3 font-semibold text-gray-700">
+                    Tidak ada siswa yang perlu perhatian
+                  </p>
+                  <p className="mt-1 text-sm text-gray-400">
+                    Kehadiran siswa dalam kondisi baik.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {siswaPerluPerhatian.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-xl border border-gray-200 bg-gray-50 p-4"
+                    >
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        {/* Informasi siswa */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 font-bold text-red-600">
+                              {item.nama.charAt(0).toUpperCase()}
+                            </div>
+
+                            <div>
+                              <p className="font-semibold text-gray-900">
+                                {item.nama}
+                              </p>
+
+                              <p className="text-xs text-gray-500">
+                                NIS: {item.nis}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Statistik */}
+                          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                            <div className="rounded-lg bg-white p-2 text-center">
+                              <p className="text-xs text-gray-400">Hadir</p>
+                              <p className="font-bold text-green-600">
+                                {item.hadir}
+                              </p>
+                            </div>
+
+                            <div className="rounded-lg bg-white p-2 text-center">
+                              <p className="text-xs text-gray-400">Izin</p>
+                              <p className="font-bold text-yellow-600">
+                                {item.izin}
+                              </p>
+                            </div>
+
+                            <div className="rounded-lg bg-white p-2 text-center">
+                              <p className="text-xs text-gray-400">Sakit</p>
+                              <p className="font-bold text-blue-600">
+                                {item.sakit}
+                              </p>
+                            </div>
+
+                            <div className="rounded-lg bg-white p-2 text-center">
+                              <p className="text-xs text-gray-400">Alpa</p>
+                              <p className="font-bold text-red-600">
+                                {item.alpa}
+                              </p>
+                            </div>
+
+                            <div className="rounded-lg bg-white p-2 text-center">
+                              <p className="text-xs text-gray-400">
+                                Kehadiran
+                              </p>
+                              <p className="font-bold text-gray-700">
+                                {item.persentase}%
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Alasan */}
+                          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                            <p className="text-xs font-semibold text-amber-700">
+                              ⚠️ Alasan perlu perhatian
+                            </p>
+
+                            <p className="mt-1 text-xs text-amber-800">
+                              {item.alasan}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* WhatsApp */}
+                        <div className="w-full lg:w-72">
+                          <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                            Nomor WhatsApp
+                          </label>
+
+                          <input
+                            type="text"
+                            value={nomorWhatsapp[item.id] ?? ""}
+                            onChange={(e) =>
+                              setNomorWhatsapp((prev) => ({
+                                ...prev,
+                                [item.id]: e.target.value,
+                              }))
+                            }
+                            placeholder="08xxxxxxxxxx"
+                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              let nomor = (
+                                nomorWhatsapp[item.id] ?? ""
+                              ).replace(/\D/g, "");
+
+                              if (!nomor) {
+                                toast.error("Nomor WhatsApp belum diisi");
+                                return;
+                              }
+
+                              if (nomor.startsWith("0")) {
+                                nomor = `62${nomor.slice(1)}`;
+                              }
+
+                              if (!nomor.startsWith("62")) {
+                                toast.error(
+                                  "Nomor WhatsApp harus menggunakan nomor Indonesia"
+                                );
+                                return;
+                              }
+
+                              const pesan =
+                                `Assalamu'alaikum, kami ingin menginformasikan bahwa siswa ${item.nama} ` +
+                                `perlu mendapatkan perhatian terkait kehadiran. ` +
+                                `Saat ini kehadiran tercatat ${item.persentase}%, ` +
+                                `dengan Hadir ${item.hadir}x, Izin ${item.izin}x, ` +
+                                `Sakit ${item.sakit}x, dan Alpa ${item.alpa}x. ` +
+                                `Mohon perhatian dan kerja samanya untuk meningkatkan kehadiran siswa. Terima kasih.`;
+
+                              const url =
+                                `https://wa.me/${nomor}?text=${encodeURIComponent(
+                                  pesan
+                                )}`;
+
+                              window.open(url, "_blank");
+                            }}
+                            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700"
+                          >
+                            📱 Kirim WhatsApp
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end border-t border-gray-200 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setShowPerhatianModal(false)}
+                className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <style>{`
         @keyframes modalIn {
           from { opacity: 0; transform: scale(0.95) translateY(-4px); }
