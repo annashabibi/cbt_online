@@ -28,10 +28,21 @@ const adminMenuItems = [
     title: "PENILAIAN ESSAY",
     items: [{ name: "Penilaian Essay", path: "/penilaian", icon: "✓" }],
   },
-  {
-    title: "LAPORAN",
-    items: [{ name: "Hasil Ulangan", path: "/hasil", icon: "▥" }],
-  },
+ {
+  title: "LAPORAN",
+  items: [
+    {
+      name: "Hasil Ulangan",
+      path: "/hasil",
+      icon: "▥",
+    },
+    {
+      name: "Absensi",
+      path: "/absensi",
+      icon: "☑",
+    },
+  ],
+},
 ];
 
 const siswaMenuItems = [

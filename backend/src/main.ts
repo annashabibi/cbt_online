@@ -7,11 +7,15 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       process.env.FRONTEND_URL,
+      'https://cbt-online-seven.vercel.app',
+      'https://cbt-online-cbt13.vercel.app',
       'http://localhost:5173',
     ],
   });
 
-  await app.listen(3000);
+  const port = Number(process.env.PORT) || 3000;
+
+  await app.listen(port, '0.0.0.0');
 }
 
 bootstrap();

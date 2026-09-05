@@ -13,6 +13,8 @@ model Kelas {
   siswa   Siswa[]
   ulangan Ulangan[]
 
+  absensiPertemuan AbsensiPertemuan[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -28,6 +30,7 @@ model Siswa {
   akun  AkunSiswa?
 
   pesertaUjian PesertaUjian[]
+  absensiSiswa AbsensiSiswa[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -135,4 +138,62 @@ model HasilUjian {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model MataPelajaran {
+  id   Int    @id @default(autoincrement())
+  kode String @unique
+  nama String
+
+  absensiPertemuan AbsensiPertemuan[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Semester {
+  id          Int    @id @default(autoincrement())
+  tahunAjaran String
+  semester    String
+
+  absensiPertemuan AbsensiPertemuan[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tahunAjaran, semester])
+}
+
+model AbsensiPertemuan {
+  id              Int      @id @default(autoincrement())
+  kelasId         Int
+  mataPelajaranId Int
+  semesterId      Int
+  pertemuanKe     Int
+  tanggal         DateTime
+
+  kelas         Kelas          @relation(fields: [kelasId], references: [id], onDelete: Cascade)
+  mataPelajaran MataPelajaran  @relation(fields: [mataPelajaranId], references: [id], onDelete: Cascade)
+  semester      Semester       @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  absensiSiswa  AbsensiSiswa[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([kelasId, mataPelajaranId, semesterId, pertemuanKe])
+}
+
+model AbsensiSiswa {
+  id                 Int     @id @default(autoincrement())
+  absensiPertemuanId Int
+  siswaId            Int
+  status             String?
+
+  absensiPertemuan AbsensiPertemuan @relation(fields: [absensiPertemuanId], references: [id], onDelete: Cascade)
+  siswa            Siswa            @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([absensiPertemuanId, siswaId])
 }

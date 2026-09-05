@@ -13,6 +13,7 @@ export default [
     route("soal", "routes/soal.tsx"),
     route("penilaian", "routes/penilaian.tsx"),
     route("hasil", "routes/hasil.tsx"),
+    route("absensi", "routes/absensi.tsx"),
     route("ujian", "routes/ujian.tsx"),
 route("ujian/:id", "routes/kerjakan-ujian.tsx"),
   ]),
