@@ -25,7 +25,7 @@ export class UpdateUlanganDto {
 
   @IsOptional()
   @IsInt()
-  kelasId?: number;
+  kelasIds: number[];
 
   @IsOptional()
   @IsDateString()

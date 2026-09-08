@@ -44,7 +44,11 @@ export class DashboardService {
         },
         take: 5,
         include: {
-          kelas: true,
+          kelas: {
+            include: {
+              kelas: true,
+            },
+          },
           soal: {
             select: {
               id: true,
@@ -132,13 +136,11 @@ export class DashboardService {
         durasi: ulangan.durasi,
         status: ulangan.status,
 
-        kelas: ulangan.kelas
-          ? {
-              id: ulangan.kelas.id,
-              kode: ulangan.kelas.kode,
-              nama: ulangan.kelas.nama,
-            }
-          : null,
+        kelas: ulangan.kelas.map((item) => ({
+          id: item.kelas.id,
+          kode: item.kelas.kode,
+          nama: item.kelas.nama,
+        })),
 
         jumlahSoal: ulangan.soal.length,
       })),
@@ -169,12 +171,17 @@ export class DashboardService {
     }
 
     // =========================
-    // CARI ULANGAN SESUAI KELAS
+    // CARI ULANGAN SESUAI KELAS SISWA
     // =========================
     const ulangan = await this.prisma.ulangan.findMany({
       where: {
-        kelasId: siswa.kelasId,
         status: true,
+
+        kelas: {
+          some: {
+            kelasId: siswa.kelasId,
+          },
+        },
       },
 
       orderBy: {
@@ -182,7 +189,11 @@ export class DashboardService {
       },
 
       include: {
-        kelas: true,
+        kelas: {
+          include: {
+            kelas: true,
+          },
+        },
 
         soal: {
           select: {
@@ -295,13 +306,11 @@ export class DashboardService {
           durasi: item.durasi,
           status: item.status,
 
-          kelas: item.kelas
-            ? {
-                id: item.kelas.id,
-                kode: item.kelas.kode,
-                nama: item.kelas.nama,
-              }
-            : null,
+          kelas: item.kelas.map((itemKelas) => ({
+            id: itemKelas.kelas.id,
+            kode: itemKelas.kelas.kode,
+            nama: itemKelas.kelas.nama,
+          })),
 
           jumlahSoal: item.soal.length,
 

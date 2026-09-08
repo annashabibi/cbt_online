@@ -49,9 +49,13 @@ async findForSiswa(siswaId: number) {
       siswaId: siswaId,
     },
     include: {
-      ulangan: {
+     ulangan: {
         include: {
-          kelas: true,
+          kelas: {
+            include: {
+              kelas: true,
+            },
+          },
           soal: {
             select: {
               id: true,
@@ -88,7 +92,15 @@ async findSayaByUlangan(
         },
       },
       include: {
-        ulangan: true,
+        ulangan: {
+          include: {
+            kelas: {
+              include: {
+                kelas: true,
+              },
+            },
+          },
+        },        
         jawaban: {
           include: {
             soal: {
@@ -193,11 +205,14 @@ async findOne(
     // -------------------------------------------------------
     // CEK ULANGAN
     // -------------------------------------------------------
-    const ulangan = await this.prisma.ulangan.findUnique({
-      where: {
-        id: dto.ulanganId,
-      },
-    });
+  const ulangan = await this.prisma.ulangan.findUnique({
+    where: {
+      id: dto.ulanganId,
+    },
+    include: {
+      kelas: true,
+    },
+  });
 
     if (!ulangan) {
       throw new NotFoundException(
@@ -236,11 +251,15 @@ async findOne(
     // -------------------------------------------------------
     // CEK KELAS
     // -------------------------------------------------------
-    if (siswa.kelasId !== ulangan.kelasId) {
-      throw new BadRequestException(
-        'Siswa tidak terdaftar pada kelas ulangan ini',
-      );
-    }
+const kelasDiizinkan = ulangan.kelas.some(
+  (item) => item.kelasId === siswa.kelasId,
+);
+
+if (!kelasDiizinkan) {
+  throw new BadRequestException(
+    'Siswa tidak terdaftar pada kelas ulangan ini',
+  );
+}
 
     // -------------------------------------------------------
     // CEK PESERTA SUDAH ADA

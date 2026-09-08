@@ -22,7 +22,7 @@ export class CreateUlanganDto {
   deskripsi?: string;
 
   @IsInt()
-  kelasId: number;
+  kelasIds: number[];
 
   @IsDateString()
   tanggal: string;
