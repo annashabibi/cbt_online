@@ -28,18 +28,22 @@ type Ulangan = {
   kode: string;
   judul: string;
   deskripsi: string | null;
-  kelasId: number;
   tanggal: string;
   durasi: number;
   status: boolean;
-  kelas: Kelas;
+  kelas: {
+    id: number;
+    kelasId: number;
+    ulanganId: number;
+    kelas: Kelas;
+  }[];
 };
 
 type FormData = {
   kode: string;
   judul: string;
   deskripsi: string;
-  kelasId: string;
+  kelasIds: number[];
   tanggal: string;
   durasi: string;
   status: boolean;
@@ -49,7 +53,7 @@ const initialForm: FormData = {
   kode: "",
   judul: "",
   deskripsi: "",
-  kelasId: "",
+  kelasIds: [],
   tanggal: "",
   durasi: "60",
   status: true,
@@ -179,24 +183,32 @@ const loadProgress = async (ulanganId: number) => {
   }
 };
 
-  const filteredData = useMemo(() => {
-    const keyword = search.toLowerCase();
+const filteredData = useMemo(() => {
+  const keyword = search.toLowerCase();
 
-    return data.filter(
-      (item) =>
-        item.kode.toLowerCase().includes(keyword) ||
-        item.judul.toLowerCase().includes(keyword) ||
-        item.kelas.nama.toLowerCase().includes(keyword),
-    );
-  }, [data, search]);
+  return data.filter(
+    (item) =>
+      item.kode.toLowerCase().includes(keyword) ||
+      item.judul.toLowerCase().includes(keyword) ||
+      item.kelas.some(
+        (itemKelas) =>
+          itemKelas.kelas.nama
+            .toLowerCase()
+            .includes(keyword) ||
+          itemKelas.kelas.kode
+            .toLowerCase()
+            .includes(keyword),
+      ),
+  );
+}, [data, search]);
 
   const openTambah = () => {
     setEditId(null);
 
-    setForm({
-      ...initialForm,
-      kelasId: kelasData.length > 0 ? String(kelasData[0].id) : "",
-    });
+   setForm({
+  ...initialForm,
+  kelasIds: [],
+});
 
     setShowModal(true);
   };
@@ -216,7 +228,9 @@ const loadProgress = async (ulanganId: number) => {
       kode: item.kode,
       judul: item.judul,
       deskripsi: item.deskripsi ?? "",
-      kelasId: String(item.kelasId),
+      kelasIds: item.kelas.map(
+        (itemKelas) => itemKelas.kelasId,
+      ),      
       tanggal: localDate,
       durasi: String(item.durasi),
       status: item.status,
@@ -314,10 +328,10 @@ const kirimWhatsApp = (
       return;
     }
 
-    if (!form.kelasId) {
-      toast.error("Kelas wajib dipilih");
-      return;
-    }
+if (form.kelasIds.length === 0) {
+  toast.error("Minimal pilih satu kelas");
+  return;
+}
 
     if (!form.tanggal) {
       toast.error("Tanggal ulangan wajib diisi");
@@ -332,15 +346,15 @@ const kirimWhatsApp = (
     try {
       setSaving(true);
 
-      const payload = {
-        kode: form.kode.trim(),
-        judul: form.judul.trim(),
-        deskripsi: form.deskripsi.trim() || undefined,
-        kelasId: Number(form.kelasId),
-        tanggal: new Date(form.tanggal).toISOString(),
-        durasi: Number(form.durasi),
-        status: form.status,
-      };
+    const payload = {
+      kode: form.kode.trim(),
+      judul: form.judul.trim(),
+      deskripsi: form.deskripsi.trim() || undefined,
+      kelasIds: form.kelasIds,
+      tanggal: new Date(form.tanggal).toISOString(),
+      durasi: Number(form.durasi),
+      status: form.status,
+    };
 
       const url =
         editId === null
@@ -540,15 +554,24 @@ const kirimWhatsApp = (
                       {item.judul}
                     </td>
 
-                    <td className="px-4 py-3">
-                      <div className="font-medium">
-                        {item.kelas.nama}
-                      </div>
-
-                      <div className="text-xs text-gray-500">
-                        {item.kelas.kode}
-                      </div>
-                    </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1.5">
+                      {item.kelas.length > 0 ? (
+                        item.kelas.map((itemKelas) => (
+                          <span
+                            key={itemKelas.id}
+                            className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700"
+                          >
+                            {itemKelas.kelas.kode}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-gray-400">
+                          Belum ada kelas
+                        </span>
+                      )}
+                    </div>
+                  </td>
 
                     <td className="px-4 py-3">
                       {formatTanggal(item.tanggal)}
@@ -720,23 +743,52 @@ const kirimWhatsApp = (
                     Kelas
                   </label>
 
-                  <select
-                    name="kelasId"
-                    value={form.kelasId}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  >
-                    <option value="">-- Pilih Kelas --</option>
+               <div className="space-y-2 rounded-lg border border-gray-300 bg-white p-3">
+  {kelasData.length === 0 ? (
+    <p className="text-sm text-gray-500">
+      Belum ada data kelas.
+    </p>
+  ) : (
+    kelasData.map((kelas) => {
+      const checked = form.kelasIds.includes(
+        kelas.id,
+      );
 
-                    {kelasData.map((kelas) => (
-                      <option
-                        key={kelas.id}
-                        value={kelas.id}
-                      >
-                        {kelas.kode} - {kelas.nama}
-                      </option>
-                    ))}
-                  </select>
+      return (
+        <label
+          key={kelas.id}
+          className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 px-3 py-2.5 hover:bg-gray-50"
+        >
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => {
+              setForm((prev) => ({
+                ...prev,
+                kelasIds: e.target.checked
+                  ? [...prev.kelasIds, kelas.id]
+                  : prev.kelasIds.filter(
+                      (id) => id !== kelas.id,
+                    ),
+              }));
+            }}
+            className="h-4 w-4 rounded"
+          />
+
+          <div>
+            <div className="text-sm font-medium text-gray-900">
+              {kelas.kode}
+            </div>
+
+            <div className="text-xs text-gray-500">
+              {kelas.nama}
+            </div>
+          </div>
+        </label>
+      );
+    })
+  )}
+</div>
                 </div>
 
                 {/* TANGGAL */}
@@ -852,7 +904,9 @@ const kirimWhatsApp = (
 
               <p className="text-xs text-gray-400">
                 Kelas:{" "}
-                {selectedUlangan.kelas.nama}
+              {selectedUlangan.kelas
+              .map((itemKelas) => itemKelas.kelas.kode)
+              .join(", ")}
               </p>
             </div>
 
