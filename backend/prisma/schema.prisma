@@ -7,11 +7,12 @@ datasource db {
 }
 
 model Kelas {
-  id        Int         @id @default(autoincrement())
-  kode      String      @unique
-  nama      String
+  id   Int    @id @default(autoincrement())
+  kode String @unique
+  nama String
+
   siswa     Siswa[]
-  ulangan   Ulangan[]
+  ulangan   UlanganKelas[]
   modulAjar ModulAjar[]
 
   absensiPertemuan AbsensiPertemuan[]
@@ -56,17 +57,32 @@ model Ulangan {
   kode      String   @unique
   judul     String
   deskripsi String?
-  kelasId   Int
   tanggal   DateTime
   durasi    Int
   status    Boolean  @default(true)
 
-  kelas        Kelas          @relation(fields: [kelasId], references: [id])
+  kelas        UlanganKelas[]
   soal         Soal[]
   pesertaUjian PesertaUjian[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model UlanganKelas {
+  id        Int @id @default(autoincrement())
+  ulanganId Int
+  kelasId   Int
+
+  ulangan Ulangan @relation(fields: [ulanganId], references: [id], onDelete: Cascade)
+  kelas   Kelas   @relation(fields: [kelasId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([ulanganId, kelasId])
+  @@index([ulanganId])
+  @@index([kelasId])
 }
 
 model Soal {
