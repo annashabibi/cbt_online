@@ -62,8 +62,12 @@ async findForSiswa(
   const ulangan = await this.prisma.ulangan.findFirst({
     where: {
       id: ulanganId,
-      kelasId: siswa.kelasId,
       status: true,
+      kelas: {
+        some: {
+          kelasId: siswa.kelasId,
+        },
+      },
     },
   });
 
@@ -93,7 +97,6 @@ async findForSiswa(
     },
   });
 }
-
   async findOne(id: number) {
     const soal = await this.prisma.soal.findUnique({
       where: { id },
