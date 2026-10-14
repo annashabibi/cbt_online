@@ -1,0 +1,15 @@
+1. ADMIN (Guru / Administrator):
+Memiliki akses ke seluruh menu:
+Dashboard: Statistik siswa, ulangan, dan nilai
+Kelas: Tambah / edit rombel kelas
+Siswa: Manajemen data siswa
+Ulangan & Soal: Buat jadwal ujian, buat soal Pilihan Ganda & Essay
+Penilaian: Koreksi jawaban essay siswa
+Hasil: Rekap nilai seluruh kelas
+Absensi & Modul Ajar: Rekap kehadiran dan modul ajar guru
+
+2. SISWA (Peserta Ujian):
+Hanya memiliki akses terbatas:
+Ujian: Daftar ulangan yang aktif dan bisa dikerjakan
+Kerjakan Soal: Menjawab soal ujian
+Hasil: Melihat nilai ujian milik sendiri
