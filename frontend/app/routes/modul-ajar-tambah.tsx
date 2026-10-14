@@ -2,10 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Plus, Trash2, ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
-
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  "https://backend-production-bef12.up.railway.app";
+import { API_URL } from "../config/api";
 
 interface Kelas {
   id: number;
